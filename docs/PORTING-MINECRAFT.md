@@ -132,28 +132,58 @@ present exactly once. The `team` word is dropped from the forbidden list for
 the same reason (it appears only in inherited CSS class names, never in a
 string a viewer reads).
 
-## C. Lava is rare under the generator the note specifies
+## C. Lava's cave gate is 300, not the note's 120
 
 The note's underground rule 2 is `C < 120` **and** a per-cell draw below
-`lavaChance[z]`. Because `C` is the interpolated cave field over `0…1023`,
-`C < 120` selects only the densest few per cent of rock, and the product with
-a 12–45 ‰ draw yields, measured over 50 seeds:
+`lavaChance[z]`. Implemented literally, that is a game with no hazard in it:
+`C` is the interpolated cave field over `0 … 1023`, so `C < 120` selects only
+the densest few per cent of rock, and the product with a 12-45 permille draw
+measured, over 300 seeds of each variant:
 
-| | `z = 2` | `z = 3` |
-|---|---|---|
-| `standard` | 0.06 cells | 0.34 cells |
-| `deepcut` | 0.16 cells | 0.60 cells |
+| gate | | `z = 2` | `z = 3` | seeds with any lava |
+|---|---|---|---|---|
+| `C < 120` | `standard` | 0.11 cells | 0.38 cells | 97/300 (32 %) |
+| `C < 120` | `deepcut` | 0.21 cells | 0.58 cells | 140/300 (47 %) |
+| `C < 300` | `standard` | 1.56 cells | 4.21 cells | 295/300 (98 %) |
+| `C < 300` | `deepcut` | 2.41 cells | 6.37 cells | 298/300 (99 %) |
 
-The generator is implemented **exactly** as specified — changing a threshold
-would be a redesign, not an implementation. The consequence is that the
-design's own test 26 ("the cert seed emits at least one `lava` event") is not
-satisfiable by any scripted episode, so `tests/test_minecraft_engine.nim`
-asserts everything else that test asks for and records this note in place of
-the lava clause. The lava rules themselves are fully covered by
-`tests/test_minecraft_sim.nim` (`dig_down`'s case 3 and `lava kills`) and by
-the renderer fixture's lava-death endcard. **Retuning `C < 120` upward is the
-one-line change that would make lava a live hazard**, and it is left to a
-follow-up because it changes the game's difficulty.
+At 120, two thirds of `standard` seeds contained **no lava at all**, and
+`endRule = death`, `deathCause = lava`, the interrupt rule, `place_block`'s
+bridge, `dig_down`'s case 3 and the death endcard were live code with no live
+traffic — while the note's own prose calls lava "the only thing in this world
+that can end a run" and its test 26 asks the certification seed to emit a
+`lava` event. `src/minecraft/world.nim`'s `LavaCaveGate` is therefore **300**.
+Everything else in rule 2 — the `lavaChance` table, the draw, the salt — is
+the note's.
+
+**This changes the game's difficulty**, so it carries a `GameVersion` bump
+(1 → 2) and the replay fixtures were re-cut against it:
+
+- The scripted `miner` now dies in lava on about one standard seed in ten
+  (0 of 100 before), and its swept total over the 40 + 40 seed battery falls
+  from 37 374 to 34 654. `tools/tune_baselines.nim` was re-run: the pick moves
+  from `woodSticks: 6` to `woodSticks: 4`, and `tools/ci/baseline_tuning.json`
+  and `DefaultBaselineParams` are re-pinned to it.
+- The sweep exposed a real defect in the baseline that no seed had reached
+  before: `safestStep` returned `fcNorth` when the cog was boxed in with **no**
+  traversable neighbour, which walked it into the lava it was fleeing. It now
+  reports "no safe step" and the miner mines its way out instead.
+- The **certification seed moves from 8 to 674** (divergence G): under the new
+  gate, seed 674's scripted episode reaches ten rungs, `z = 3`, 941 ticks, and
+  emits a `lava` event, so the design note's test-26 lava clause is asserted
+  rather than documented away.
+
+Every level is still at least 78 % diggable (`unsealLava`, post-pass 5), every
+seed is still completable (`tests/test_minecraft_world.nim`'s reachability
+flood over 60 seeds of both variants), and the `miner` baseline still clears
+rung 9 on 38 of 50 standard seeds.
+
+One thing the higher gate does **not** make common is the *interrupt* (tick
+step 8): it fires only on lava that becomes newly known while already within
+Chebyshev 1, and the 5 × 5 underground window usually reveals a lava cell two
+steps before the cog can stand next to it. Most lava deaths are a stale plan
+walking into a cell the cog learned about mid-turn, which is the reactivity
+cost the note's batching section describes.
 
 ## D. Seeking re-simulates instead of restoring a keyframe
 
@@ -182,16 +212,19 @@ writer and `runResultsJson` — with the websockets left out.
 `tools/ci/docker_smoke.sh` covers the socket path end to end, in the
 production image, on every CI run.
 
-## G. The certification fixture's seed is 8, not 42
+## G. The certification fixture's seed is 674, not 42
 
 The design note pins `seed: 42` for the certification fixture and asks that the
-episode it produces reach at least seven rungs, descend to at least `z = 2` and
-run at least 400 ticks, so the CI smoke replay always exercises the milestone,
-new-depth and blocked paths and always outlasts the ten-second viewer soak.
-Under the corrected 30-bit `mix64` (divergence H) seed 42 reaches six rungs;
-seed 8 reaches **nine**, descends to `z = 2`, runs the full **960** ticks and
-mines forty ore blocks. `tools/probe_seeds.nim` is the committed probe that
-picked it and `tests/test_minecraft_engine.nim` asserts every one of those
+episode it produces reach at least seven rungs, descend to at least `z = 2`,
+run at least 400 ticks and emit at least one `lava` event, so the CI smoke
+replay always exercises the milestone, new-depth, blocked and lava paths and
+always outlasts the ten-second viewer soak. Under the corrected 30-bit `mix64`
+(divergence H) seed 42 reaches six rungs. Seed 674 reaches **ten**, descends to
+`z = 3`, runs **941** ticks, mines fifteen ore blocks and emits a `lava` event
+under the divergence-C gate, so every clause of the note's test 26 is now
+asserted and none of it is documented away. `tools/probe_seeds.nim` is the
+committed probe that picked it (its filter is exactly the note's list of clauses, lava
+included) and `tests/test_minecraft_engine.nim` asserts every one of those
 properties against whatever seed the manifest actually declares, so the two can
 never drift.
 

@@ -234,18 +234,14 @@ block certSeedIsInteresting:
   doAssert episode.oreMines >= 1
   doAssert episode.digDowns >= 1
   doAssert episode.blockedEvents >= 1
-  # NOTE: the design note also asks for at least one `lava` event on the cert
-  # seed. Under the generator the note specifies (rule 2: `C < 120` AND a
-  # per-cell draw below `lavaChance`) a deep level carries 0.06 (z=2) to 0.34
-  # (z=3) lava cells on average, so no scripted episode reliably sees one.
-  # The generator is implemented exactly as specified; the lava paths are
-  # covered by tests/test_minecraft_sim.nim (dig_down case 3 and `lava kills`)
-  # and by the renderer fixture's lava-death endcard instead. Recorded in
-  # docs/PORTING-MINECRAFT.md.
+  doAssert episode.lavaEvents >= 1,
+    "the cert seed must exercise the lava path: the CI smoke replay is the " &
+    "only replay a browser ever loads in this repo"
   removeDir(dir)
   echo "ok: the cert seed reaches ", episode.sim.ledger.milestonesReached(),
     " rungs, z=", episode.sim.deepestLevel, ", ",
-    episode.sim.gameTicksElapsed(), " ticks"
+    episode.sim.gameTicksElapsed(), " ticks, ", episode.lavaEvents,
+    " lava events"
 
 # 27. `no seat can stall`
 block noSeatCanStall:

@@ -44,7 +44,7 @@ const DefaultBaselineParams* = BaselineParams(
   ## highest. `tools/ci/baseline_tuning.json` records it and
   ## `tests/test_minecraft_driver.nim` asserts the two still agree.
   woodPlanks: 8,
-  woodSticks: 6,
+  woodSticks: 4,
   stoneCobble: 12,
   stoneCoal: 3,
   sweepLength: 9,
@@ -114,9 +114,14 @@ proc lavaAdjacent(sim: SimServer): tuple[found: bool, x: int, y: int,
     return near
   (false, 0, 0, 0)
 
-proc safestStep(sim: SimServer): Facing =
+proc safestStep(sim: SimServer): tuple[found: bool, facing: Facing] =
   ## The known traversable neighbour that maximises the Chebyshev distance to
   ## every known lava cell on this level, ties by the neighbour order.
+  ##
+  ## `found` is false when the cog is boxed in: with no traversable neighbour
+  ## there is no safe step, and a default facing here would be a step in an
+  ## arbitrary direction - straight into the lava, if that is what is in
+  ## front. Standing still costs a tick; the other one ends the run.
   var
     best = fcNorth
     bestScore = -1
@@ -139,7 +144,7 @@ proc safestStep(sim: SimServer): Facing =
     if score > bestScore:
       bestScore = score
       best = facing
-  best
+  (bestScore >= 0, best)
 
 proc craftAction(sim: SimServer, params: BaselineParams): tuple[has: bool,
     action: PlanAction] =
@@ -266,8 +271,13 @@ proc minerPlan*(sim: SimServer, params: BaselineParams,
       result.actions.add(primitiveAct(pPlaceBlock))
     else:
       let away = sim.safestStep()
-      result.actions.add(moveAct(away, 1))
-      result.actions.add(moveAct(away, 2))
+      if away.found:
+        result.actions.add(moveAct(away.facing, 1))
+        result.actions.add(moveAct(away.facing, 2))
+      else:
+        ## Boxed in beside lava: mine a way out of the rock rather than step
+        ## into the one cell that is walkable.
+        result.actions.add(primitiveAct(pMine, 2))
     return
 
   # 2. Craft whatever is affordable right now, then fall through to rule 6.

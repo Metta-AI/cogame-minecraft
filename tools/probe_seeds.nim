@@ -36,10 +36,10 @@ proc play(seed: int): tuple[rungs, z, ticks, lava, blocked, digs, ores, crafts: 
       queue.setLen(0); turnTicks = sim.config.turnTicks
   (sim.ledger.milestonesReached(), sim.deepestLevel, sim.gameTicksElapsed(),
    result.lava, result.blocked, result.digs, result.ores, result.crafts)
-for seed in 1 .. 80:
+for seed in 1 .. 1200:
   let r = play(seed)
   if r.rungs >= 7 and r.z >= 2 and r.ticks >= 400 and r.blocked >= 1 and
-      r.digs >= 2 and r.ores >= 1 and r.crafts >= 1:
+      r.digs >= 2 and r.ores >= 1 and r.crafts >= 1 and r.lava >= 1:
     echo "seed ", seed, " rungs=", r.rungs, " z=", r.z, " ticks=", r.ticks,
       " lava=", r.lava, " blocked=", r.blocked, " digs=", r.digs,
       " ores=", r.ores, " crafts=", r.crafts

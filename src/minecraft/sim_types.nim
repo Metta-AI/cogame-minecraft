@@ -15,8 +15,10 @@
 import std/[strutils, unicode]
 
 const
-  GameVersion* = "1"
+  GameVersion* = "2"
     ## Changelog, PREPEND ONLY (the starter's discipline):
+    ##   2 - lava is a live hazard: the generator's cave gate for lava rises
+    ##       from 120 to 300, so lava exists on 98% of seeds instead of 32%.
     ##   1 - first release: the eleven-rung ObtainDiamond ladder over four
     ##       stacked 32x32 levels, seventeen primitives and three macros.
   GameName* = "minecraft"

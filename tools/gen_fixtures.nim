@@ -54,5 +54,5 @@ proc gen(seed: int, path: string) =
   writer.writeChat(tickTime(sim.tickCount), 0, resultRecord(sim))
   writer.closeReplayWriter()
   echo path, " rungs=", sim.ledger.milestonesReached(), " ticks=", sim.gameTicksElapsed(), " bytes=", getFileSize(path)
-gen(8, "tests/fixtures/cert_seed_8.replay")
-gen(5, "tests/fixtures/diamond_seed_5.replay")
+gen(674, "tests/fixtures/cert_seed_674.replay")
+gen(18, "tests/fixtures/diamond_seed_18.replay")

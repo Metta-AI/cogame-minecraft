@@ -71,6 +71,13 @@ proc isRing*(world: World, x, y: int): bool {.inline.} =
 
 const NoiseStride = 8
 
+const LavaCaveGate* = 300
+  ## Rule 2's cave gate: a cell is a candidate for lava only where the cave
+  ## field is below this. The design note writes 120; at 120 the product with
+  ## a 12-45 permille draw put 0.11 lava cells on z=2 and 0.38 on z=3, and
+  ## 68 % of standard seeds had no lava anywhere, which made the game's only
+  ## lethal thing unreachable (docs/PORTING-MINECRAFT.md, divergence C).
+
 proc latticeValue(seed, salt, gx, gy: int): int =
   ## A lattice corner: `mix64(seed, fieldSalt, gx, gy) mod 1024`.
   mix64(seed, salt, gx, gy) mod 1024
@@ -243,7 +250,8 @@ proc generateWorld*(config: GameConfig): World =
             oreB = oreBFor(config, z)
           if c > caveThresholdFor(config, z):
             result.setBlock(x, y, z, bkTunnel)
-          elif c < 120 and draw(seed, z, 0, x, y) < lavaChanceFor(config, z):
+          elif c < LavaCaveGate and draw(seed, z, 0, x, y) <
+              lavaChanceFor(config, z):
             result.setBlock(x, y, z, bkLava)
           elif v > config.veinThreshold and
               draw(seed, z, 1, x, y) < oreA.chance:
