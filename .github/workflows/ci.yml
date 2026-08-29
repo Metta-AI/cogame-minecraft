@@ -110,7 +110,11 @@ jobs:
           test -x tools/build_replay_viewer.sh
           test -s tools/ci/viewer_smoke.mjs
           test -s tools/ci/policies.json
-          if grep -n '<slug>\|<IMAGE>\|<SEATS>' \
+          # The pattern is BUILT, never written as a literal: ci.yml is one of
+          # the files this gate greps, so a literal would match itself and the
+          # gate would fail on a perfectly substituted repo.
+          pat="$(printf '<%s>\\|<%s>\\|<%s>' slug IMAGE SEATS)"
+          if grep -n "${pat}" \
             .github/workflows/ci.yml .github/workflows/coworld-release.yml \
             .github/workflows/coworld-submit.yml tools/ci/docker_smoke.sh \
             tools/ci/policies.json
@@ -394,16 +398,6 @@ jobs:
               "${fixture}" 200
             echo "::endgroup::"
           done
-
-      - name: No unsubstituted scaffold placeholders
-        run: |
-          set -euo pipefail
-          if grep -n '<slug>\|<IMAGE>\|<SEATS>' \
-            .github/workflows/ci.yml .github/workflows/coworld-release.yml \
-            .github/workflows/coworld-submit.yml tools/ci/docker_smoke.sh \
-            tools/ci/policies.json
-          then echo "::error::unsubstituted placeholders remain"; exit 1; fi
-          echo "no unsubstituted placeholders"
 
       - name: Upload the viewer smoke evidence
         # Always: the screenshot and the JSON are most useful when the job is red.

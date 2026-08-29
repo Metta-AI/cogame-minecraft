@@ -20,8 +20,9 @@ COPY nimby.lock .
 RUN nimby --global sync nimby.lock
 
 COPY . .
-RUN nim c -d:emscripten replay-viewer/minecraft_replay.nim && \
-  nim c -r --hints:off -o:/tmp/gen_wire_constants tools/gen_wire_constants.nim \
+RUN nim c -d:emscripten --path:src replay-viewer/minecraft_replay.nim && \
+  nim c -r --hints:off --path:src -o:/tmp/gen_wire_constants \
+    tools/gen_wire_constants.nim \
     > replay-viewer/dist/wire_constants.js && \
   cp client/broadcast_core.js replay-viewer/dist/broadcast_core.js && \
   cp client/chrome_common.js replay-viewer/dist/chrome_common.js && \

@@ -34,7 +34,7 @@ COPY nimby.lock .
 RUN nimby --global sync nimby.lock
 
 COPY . .
-ARG NimFlags="-d:release -d:useMalloc --opt:speed --stackTrace:on"
+ARG NimFlags="-d:release -d:useMalloc --opt:speed --stackTrace:on --path:src"
 RUN nim c \
   $NimFlags \
   --nimcache:/tmp/minecraft-nimcache \
