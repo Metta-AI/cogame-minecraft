@@ -28,6 +28,8 @@ type
     itemsCrafted: int
     ironSmelted: int
     interrupts: int
+    bridges: int
+    blockedActs: int
     lastMinedBlock: string
     lastMinedRun: int
 
@@ -35,10 +37,21 @@ const BroadcastEventKinds* = [
   "turn", "plan", "say", "fallback", "milestone", "mine", "craft", "smelt",
   "place", "descend", "ascend", "lava", "bridge", "blocked", "death", "end"
 ]
-  ## The closed enum `stepEvents` can emit, asserted by
-  ## `tests/test_minecraft_events.nim`. The scrubber's BEAT kinds are the five
-  ## subset `{milestone, newdepth, death, fallback, end}` - `newdepth` is a
-  ## `descend` with `first: true`.
+  ## The closed broadcast vocabulary: every kind the appended game block may
+  ## handle. The scrubber's BEAT kinds are the five subset
+  ## `{milestone, newdepth, death, fallback, end}` - `newdepth` is a `descend`
+  ## with `first: true`.
+
+const StepEventKinds* = [
+  "milestone", "descend", "ascend", "mine", "place", "smelt", "craft", "lava",
+  "bridge", "blocked", "death", "end"
+]
+  ## The subset `stepEvents` can emit, asserted for EQUALITY (not containment)
+  ## by `tests/test_minecraft_events.nim`. The four that are missing -
+  ## `turn`, `plan`, `say`, `fallback` - are facts about the DECISION layer,
+  ## which the sim never sees: they reach the chrome through the `directive`
+  ## and `fallback` chat records, applied by `replays.applyControlRecord` on
+  ## record and on playback alike, and drawn from `state.directives`.
 
 proc initBroadcastTracker*(): BroadcastTracker =
   result.prevPhase = Lobby
@@ -56,6 +69,8 @@ proc snapshot(tracker: var BroadcastTracker, sim: SimServer) =
   tracker.itemsCrafted = sim.itemsCrafted
   tracker.ironSmelted = sim.ironSmelted
   tracker.interrupts = sim.interrupts
+  tracker.bridges = sim.bridgesPlaced
+  tracker.blockedActs = sim.blockedActs
   tracker.prevTick = sim.tickCount
   tracker.prevPhase = sim.phase
   tracker.initialized = true
@@ -103,6 +118,18 @@ proc stepEvents*(sim: var SimServer, tracker: var BroadcastTracker,
     events.add(%*{
       "k": "place", "t": tick, "what": "block",
       "z": sim.cog.z, "x": sim.cog.x, "y": sim.cog.y
+    })
+  if sim.bridgesPlaced > tracker.bridges:
+    ## The cobblestone went into lava or water: the note's
+    ## `BRIDGED OVER THE LAVA` feed row, which had no event to fire it.
+    events.add(%*{
+      "k": "bridge", "t": tick, "z": sim.cog.z, "x": sim.cog.x,
+      "y": sim.cog.y
+    })
+  if sim.blockedActs > tracker.blockedActs and sim.lastPlan.blocked.len > 0:
+    let last = sim.lastPlan.blocked[^1]
+    events.add(%*{
+      "k": "blocked", "t": tick, "act": last.act, "why": last.why
     })
   if sim.ironSmelted > tracker.ironSmelted:
     events.add(%*{"k": "smelt", "t": tick,

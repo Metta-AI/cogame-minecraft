@@ -76,6 +76,7 @@ type
     ironOreMined*: int
     diamondsMined*: int
     interrupts*: int
+    blockedActs*: int
     primitivesExecuted*: int
     actionsDropped*: int
     macrosUnreachable*: int
@@ -347,6 +348,7 @@ proc step*(sim: var SimServer, primitive: Primitive) =
     sim.emitEvent(Ascend, what = levelShortLabel(sim.cog.z),
       x = sim.cog.x, y = sim.cog.y, z = sim.cog.z)
   if outcome.blocked:
+    inc sim.blockedActs
     sim.lastPlan.blocked.add(($primitive, $outcome.why))
     sim.emitEvent(BlockedAct, what = $primitive, why = $outcome.why)
   if outcome.brokeOntoLava:
