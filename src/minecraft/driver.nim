@@ -41,6 +41,12 @@ proc expandOne(sim: SimServer, action: PlanAction,
     ## Against the KNOWN map of the cog's current level as of turn start. A
     ## target that is not reachable through known walkable cells yields ZERO
     ## primitives and counts as `unreachable`.
+    if action.x == sim.cog.x and action.y == sim.cog.y:
+      ## Already standing on it. Zero primitives, but NOT unreachable: the
+      ## note scopes `unreachable` to a target the driver cannot path to, and
+      ## reporting "I could not get there" for a cell the cog is on would be
+      ## a lie in the one field that tells a policy its plan was refused.
+      return
     let steps = sim.world.bfsPath(sim.cog.x, sim.cog.y, sim.cog.z,
       action.x, action.y, cap)
     if steps.len == 0:

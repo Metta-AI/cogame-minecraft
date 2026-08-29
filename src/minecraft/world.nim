@@ -288,6 +288,10 @@ proc generateWorld*(config: GameConfig): World =
           if result.at(x, y, 0) != bkGrass:
             continue
           if chebyshev(x, y, spawn.x, spawn.y) <= 1:
+            ## Never plant inside the forced grass 3x3 of post-pass 1: a tree
+            ## on the spawn cell would break the invariant the note states
+            ## one paragraph above (and tests/test_minecraft_world.nim
+            ## asserts) - that the whole block at spawn is grass.
             continue
           if result.treeWithin(x, y, 2):
             continue
@@ -313,6 +317,10 @@ proc generateWorld*(config: GameConfig): World =
     result.promoteStone(seed, 3, bkIronOre, config.minIronDiamond)
 
   # 5. No lava seals a level: every level stays at least 78% diggable.
+  ##  The note gives this bound twice and the two disagree: "below 700 ...
+  ##  until it is 700" and "at least 78 % diggable". 78 % of the 900 interior
+  ##  cells is 702, which satisfies BOTH readings, so the percentage is what
+  ##  the code takes.
   let floorCells = ((size - 2) * (size - 2) * 78) div 100
   for z in 2 ..< levels:
     result.unsealLava(seed, z, floorCells)

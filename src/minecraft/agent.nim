@@ -41,7 +41,6 @@ type
     shaftSet*: bool
     shaftX*, shaftY*, shaftZ*: int
     crafted*: bool
-    craftedItem*: Item
     craftedCount*: int
     smelted*: bool
     descended*: bool
@@ -307,7 +306,6 @@ proc applyPrimitive*(w: var World, cog: var Cog, primitive: Primitive,
     if cog.take(itLog, 1):
       cog.give(itPlanks, 4)
       result.crafted = true
-      result.craftedItem = itPlanks
       result.craftedCount = 4
     else:
       result.blocked = true
@@ -316,7 +314,6 @@ proc applyPrimitive*(w: var World, cog: var Cog, primitive: Primitive,
     if cog.take(itPlanks, 2):
       cog.give(itStick, 4)
       result.crafted = true
-      result.craftedItem = itStick
       result.craftedCount = 4
     else:
       result.blocked = true

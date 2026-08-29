@@ -150,6 +150,17 @@ block tunnelExpansion:
   walk.actions = @[PlanAction(kind: akMove, facing: fcSouth, n: 4)]
   doAssert expandPlan(sim, walk).queue == @[pMoveSouth, pMoveSouth,
     pMoveSouth, pMoveSouth]
+  # a goto to the cell the cog is standing on is ARRIVAL, not unreachability
+  var here: Plan
+  here.actions = @[PlanAction(kind: akGoto, x: sim.cog.x, y: sim.cog.y, n: 1)]
+  let arrived = expandPlan(sim, here)
+  doAssert arrived.queue.len == 0
+  doAssert arrived.unreachable == 0,
+    "a goto to the cog's own cell must not be reported as unreachable"
+  # ...while a target the driver cannot path to still is
+  var nowhere: Plan
+  nowhere.actions = @[PlanAction(kind: akGoto, x: 1, y: 1, n: 1)]
+  doAssert expandPlan(sim, nowhere).unreachable == 1
   echo "ok: tunnel is n x (mine, move) and every macro respects its cap"
 
 # 21. `fallback is the miner proc`
