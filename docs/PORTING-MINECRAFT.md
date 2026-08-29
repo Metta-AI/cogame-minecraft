@@ -355,3 +355,20 @@ failed, the replay says which baseline played, and the run scores. A refusal
 would instead produce no replay, no results document and nothing for the
 league to read, on the one failure mode a single-seat game is most likely to
 hit.
+
+## N. `llmTurns` and `fallbackTurns` are per-seat arrays, not scalars
+
+The note's worked results document shows `"llmTurns": 47, "fallbackTurns": 1`
+as plain integers. This game has exactly one seat, so a scalar would be
+readable — but every other per-seat key in the document (`scores`, `win`,
+`names`, `aliases`, `policyKinds`, `deadSeats`) is an array of length
+`num_agents`, which is the platform's own shape, and mixing the two in one
+document would make a consumer special-case two keys.
+
+Both keys are therefore
+`{"type": "array", "items": {"type": "integer"}, "minItems": 1, "maxItems": 1}`
+in `coworld_manifest_template.json`'s `results_schema`, exactly as
+`src/minecraft/roster.nim` writes them.
+`tests/test_minecraft_engine.nim` asserts the written key set equals the
+declared key set with nothing extra and nothing missing, so the code and the
+schema cannot drift apart.
