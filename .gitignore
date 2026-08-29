@@ -10,8 +10,11 @@ tmp/
 dist/
 node_modules/
 replay-viewer/dist/
-minecraft
-minecraft-player
+# ROOT-ANCHORED: the two built binaries, not the src/minecraft/ package
+# (an unanchored `minecraft` line matches ANY path component of that name
+# and silently un-tracks the whole sim).
+/minecraft
+/minecraft-player
 *.replay
 *.bitreplay
 # ...but the committed replay fixtures ARE the wasm smoke's evidence.
