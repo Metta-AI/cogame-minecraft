@@ -1,0 +1,74 @@
+Alpha
+bad_target
+bedrock
+bedrock_floor
+blocked_move
+climb_up
+coal
+coal ore
+cobblestone
+complete
+craft_iron_pickaxe
+craft_planks
+craft_sticks
+craft_stone_pickaxe
+craft_wooden_pickaxe
+crafting table
+crafting_table
+deadline
+death
+diamond
+diamond ore
+dig_down
+east
+fault
+furnace
+goto
+grass
+iron ore
+iron_ingot
+iron_ore
+iron_pickaxe
+lava
+lava_below
+log
+mine
+miner
+move
+move_east
+move_north
+move_south
+move_west
+no_furnace
+no_materials
+no_shaft
+no_table
+no_tier
+none
+noop
+north
+oak tree
+place_block
+place_crafting_table
+place_furnace
+planks
+raw_iron
+sand
+scrounger
+smelt_iron
+south
+stick
+stone
+stone_pickaxe
+tickCap
+tunnel
+turnCap
+unmineable
+wallClock
+water
+west
+wooden_pickaxe
+y=12 (diamond depth)
+y=32 (iron depth)
+y=48 (stone)
+y=64 (surface)

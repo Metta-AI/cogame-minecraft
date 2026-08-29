@@ -1,0 +1,8 @@
+services:
+  minecraft:
+    image: coworld-minecraft:latest
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host

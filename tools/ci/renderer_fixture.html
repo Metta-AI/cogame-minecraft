@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-fixture="pending">
+<head>
+<meta charset="utf-8">
+<title>minecraft renderer fixture</title>
+<style>
+  html, body { margin: 0; background: #0b0a08; color: #f2e8d8;
+    font: 12px/1.4 system-ui, sans-serif; }
+  #frame { display: block; border: 0; background: #000; }
+  #log { padding: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<!--
+  The renderer fixture.
+
+  docker_smoke.sh runs with NO ANTHROPIC_API_KEY, so the CI replay's seat plays
+  scripted and emits no `say` at all - the smoke replay can therefore never
+  exercise the feed's narration path (the cogchemists 2026-08-24 scar). This
+  page LOADS THE SHIPPED dist/static-replay-viewer/index.html IN AN IFRAME and
+  drives the real drawing code through the one hook the appended game block
+  exports (`MinecraftChrome.__fixture`). It does NOT re-implement any drawing
+  (the particle-worlds 2026-08-26 scar): every pixel it checks is painted by
+  the bundle the platform will serve.
+
+  Driven scenarios, at several canvas widths INCLUDING 360 px:
+    * a full-cap 160-rune `say` in the feed,
+    * all 11 ladder chips locked, then all 11 lit,
+    * the strata gauge at each of the four depths,
+    * a lava-death endcard, an `11 OF 11` diamond endcard, and a turnCap
+      endcard.
+
+  It sets data-fixture="ok" on <html> when every scenario drew without
+  throwing, and data-fixture-error="<message>" on the first failure.
+-->
+<iframe id="frame" width="960" height="540"></iframe>
+<div id="log">starting…</div>
+<script>
+(function () {
+  'use strict';
+  var log = document.getElementById('log');
+  var frame = document.getElementById('frame');
+  var WIDTHS = [960, 640, 360];
+  var lines = [];
+
+  function say(text) {
+    lines.push(text);
+    log.textContent = lines.join('\n');
+  }
+
+  function fail(message) {
+    document.documentElement.setAttribute('data-fixture-error', String(message));
+    document.documentElement.setAttribute('data-fixture', 'failed');
+    say('FAIL ' + message);
+  }
+
+  function ladder(litUpTo) {
+    var ids = ['log', 'planks', 'crafting_table', 'wooden_pickaxe',
+      'cobblestone', 'stone_pickaxe', 'iron_ore', 'furnace', 'iron_ingot',
+      'iron_pickaxe', 'diamond'];
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      out.push({ id: ids[i], p: 1 << i, t: i < litUpTo ? 14 + i * 30 : -1 });
+    }
+    return out;
+  }
+
+  function view(size, glyph) {
+    var rows = [];
+    for (var y = 0; y < size; y++) {
+      var row = '';
+      for (var x = 0; x < size; x++) {
+        row += (x === (size >> 1) && y === (size >> 1)) ? '@' : glyph;
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  // A full-cap 160-rune say, built from 4-byte emoji + ASCII so the feed row
+  // is exercised at exactly the cap the engine truncates to.
+  var FULL_SAY = (function () {
+    var s = '';
+    while (s.length < 150) s += 'iron in the wall and a table already down - ';
+    return s.slice(0, 150) + '\u{1F600}\u{1F600}';
+  })();
+
+  function state(opts) {
+    var z = opts.z || 0;
+    var lit = opts.lit === undefined ? 6 : opts.lit;
+    var s = {
+      t: opts.tick || 401, mt: 960, ph: opts.ph || 'playing', lob: 0,
+      pl: true, sp: 1, mx: 960, st: 0, lp: true, sk: false, ff: false,
+      en: true, mm: -1, bs: 1, pov: -1, turnTicks: 20,
+      teams: { red: { lives: lit, prog: (1 << lit) - 1, policies: ['daveey'] } },
+      roster: [{ s: 0, name: 'daveey', alias: 'Alpha', pol: 'daveey',
+                 team: 'red', alive: true, lives: lit, kind: 'llm' }],
+      events: [],
+      directives: [{ turn: opts.turn || 21, slot: 0, source: opts.source || 'llm',
+                     say: opts.say === undefined ? FULL_SAY : opts.say }],
+      beats: opts.beats || [],
+      mc: {
+        x: 12, y: 19, z: z, facing: 'east',
+        level: ['y=64', 'y=48', 'y=32', 'y=12'][z],
+        levelLabel: 'level', tier: 2, alive: opts.alive !== false,
+        size: 32, levels: 4,
+        inv: { log: 1, planks: 5, stick: 4, cobblestone: 14, coal: 3,
+               raw_iron: 0, iron_ingot: 0, diamond: lit > 10 ? 1 : 0 },
+        tools: { wooden_pickaxe: lit > 3, stone_pickaxe: lit > 5,
+                 iron_pickaxe: lit > 9 },
+        ms: ladder(lit), n: lit, of: 11,
+        score: 1000 * ((1 << lit) - 1) + 119, mscore: (1 << lit) - 1,
+        speed: 119, deepest: z,
+        shafts: [[0, 16, 16], [1, 16, 16], [2, 13, 19]],
+        ore: [{ w: 'coal ore', z: 1, x: 20, y: 7 },
+              { w: 'iron ore', z: 2, x: 13, y: 19 },
+              { w: 'diamond ore', z: 3, x: 9, y: 21 }],
+        view: view(z === 0 ? 11 : 5, z === 0 ? '.' : '#'),
+        vr: z === 0 ? 5 : 2, seen: 412, cells: 4096,
+        mined: 184, built: 2, crafted: 9, smelted: 0, dug: 2, bridges: 1,
+        interrupts: 3, fallbacks: opts.fallbacks || 1,
+        turn: opts.turn || 21, turns: 48, death: opts.death || 'none'
+      }
+    };
+    if (opts.ph === 'gameover') {
+      s.over = {
+        winner: lit >= 6 ? 'red' : '', draw: false, timeLimit: true,
+        teams: { red: { lives: lit, prog: (1 << lit) - 1 } },
+        endRule: opts.endRule || 'turnCap', reason: 'complete',
+        milestones: lit, of: 11, score: 1000 * ((1 << lit) - 1) + 119,
+        deepest: ['y=64', 'y=48', 'y=32', 'y=12'][z], tick: opts.tick || 960,
+        death: opts.death || 'none'
+      };
+    }
+    return s;
+  }
+
+  var SCENARIOS = [
+    { name: 'surface, nothing lit, full-cap say',
+      opts: { z: 0, lit: 0, turn: 1 } },
+    { name: 'stone level, six rungs', opts: { z: 1, lit: 6, turn: 12 } },
+    { name: 'iron depth, nine rungs, fallback glyph',
+      opts: { z: 2, lit: 9, turn: 30, source: 'fallback', fallbacks: 4 } },
+    { name: 'diamond depth, every chip lit', opts: { z: 3, lit: 11, turn: 40 } },
+    { name: 'turnCap endcard',
+      opts: { z: 2, lit: 8, ph: 'gameover', endRule: 'turnCap', tick: 960 } },
+    { name: 'lava-death endcard',
+      opts: { z: 2, lit: 5, ph: 'gameover', endRule: 'death', tick: 388,
+              death: 'lava', alive: false, say: '' } },
+    { name: '11 OF 11 diamond endcard',
+      opts: { z: 3, lit: 11, ph: 'gameover', endRule: 'diamond', tick: 604 } }
+  ];
+
+  var BEATS = [
+    { k: 'milestone', t: 14, id: 'log', n: 1, of: 11 },
+    { k: 'newdepth', t: 21, to: 'y=48' },
+    { k: 'fallback', t: 200, cause: 'timeout' },
+    { k: 'death', t: 388 },
+    { k: 'end', t: 960, milestones: 8 }
+  ];
+
+  function drive(win) {
+    var chrome = win.MinecraftChrome;
+    if (!chrome || typeof chrome.__fixture !== 'function') {
+      throw new Error('the bundle exposes no MinecraftChrome.__fixture hook');
+    }
+    for (var w = 0; w < WIDTHS.length; w++) {
+      frame.width = WIDTHS[w];
+      frame.height = Math.round(WIDTHS[w] * 9 / 16);
+      for (var i = 0; i < SCENARIOS.length; i++) {
+        var opts = SCENARIOS[i].opts;
+        opts.beats = BEATS;
+        chrome.__fixture(state(opts));
+        say('drew "' + SCENARIOS[i].name + '" at ' + WIDTHS[w] + 'px');
+      }
+    }
+  }
+
+  function start() {
+    var win = frame.contentWindow;
+    var tries = 0;
+    (function poll() {
+      tries++;
+      try {
+        if (win.MinecraftChrome) {
+          drive(win);
+          document.documentElement.setAttribute('data-fixture', 'ok');
+          say('OK ' + (WIDTHS.length * SCENARIOS.length) + ' frames drawn');
+          return;
+        }
+      } catch (error) {
+        fail(error && error.message ? error.message : String(error));
+        return;
+      }
+      if (tries > 200) {
+        fail('the viewer bundle never published MinecraftChrome');
+        return;
+      }
+      setTimeout(poll, 100);
+    })();
+  }
+
+  frame.addEventListener('load', start);
+  // The replay URL is appended by tools/ci/fixture_smoke.mjs so the bundle
+  // boots exactly the way the platform boots it.
+  var replay = new URLSearchParams(location.search).get('replay') || '';
+  frame.src = './index.html?replay=' + encodeURIComponent(replay) + '&spoilers=1';
+})();
+</script>
+</body>
+</html>

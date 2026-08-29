@@ -1,0 +1,35 @@
+[
+  {
+    "name": "minecraft-obtaindiamond",
+    "run": "/bin/minecraft-player",
+    "env": {
+      "PLAYER_PROMPT": "Get to the diamond. Nothing else is worth a tick.\n\"milestones.locked\" is your to-do list and it is already in dependency order.\nEvery turn, work the FIRST locked rung you could move on this turn, and fill all\n20 ticks with that one job. Never spend a turn \"getting ready\".\nThe opening is fixed. Do not improvise it.\n  turn 1: goto the nearest T, mine n=2 (that is 6 logs), craft_planks n=3,\n          craft_sticks n=1, place_crafting_table, craft_wooden_pickaxe.\n          That is four rungs in one turn.\n  turn 2: craft_planks with any log left so you carry 8+ planks and 4+ sticks,\n          then dig_down and start tunnelling. The floor under your spawn is\n          always stone, so that dig_down is also the cobblestone rung.\nRules of the descent, in order of how much they cost you when broken:\n1. NEVER walk back up. Wood is the only thing that does not exist below y=64,\n   so leave the surface carrying 8 planks and 4 sticks and never need it again.\n2. Leave y=48 only with 12+ cobblestone and 3+ coal AND a stone pickaxe. Twelve\n   cobblestone is a furnace (8) plus a stone pickaxe (3) plus one spare.\n3. The instant a level has nothing left you need, dig_down. A level you have\n   finished is a level you should not be standing on.\n4. Underground you see 5x5. Tunnel in STRAIGHT LINES:\n   {\"act\":\"tunnel\",\"dir\":\"east\",\"n\":9} is 18 ticks and reveals a whole\n   corridor. Turn 90 degrees on the next turn so you sweep a lattice instead of\n   drilling one hole.\n5. The moment \"known_ore\" lists ore you have the tier for on THIS level, goto it\n   and mine it. Ore you cannot mine yet: write its z,x,y into \"notes\" and come\n   back with the right pickaxe.\n6. Build the workshop where you are standing. At y=32 with 3 raw iron and 3\n   coal: place_crafting_table, place_furnace, smelt_iron n=3,\n   craft_iron_pickaxe. Four actions, one turn, no walking.\n7. At y=12, tunnel east-west along one row for 9, then next turn move 3 rows\n   and tunnel back. Diamond sits in veins of 1-3 blocks; a lattice finds them\n   and a random walk does not.\nNever step onto \"!\". If a turn comes back with \"interrupted\":\"lava_found\",\nlava is adjacent to you: move away from it or place_block into it before you\nplan anything else.\nRewrite \"notes\" every turn: the rung you are on, what you are carrying, the\nz,x,y of every ore you have seen and not mined, where your table and furnace\nare, and which rows you have already swept.",
+      "PLAYER_POLICY_LABEL": "obtaindiamond"
+    }
+  },
+  {
+    "name": "minecraft-branchminer",
+    "run": "/bin/minecraft-player",
+    "env": {
+      "PLAYER_PROMPT": "Mine like an engineer. The ladder falls out of good tunnels.\nPHASE 1 - KIT (turns 1-3). Nearest T, mine n=2, craft_planks n=3, craft_sticks\nn=2, place_crafting_table, craft_wooden_pickaxe. Then chop a SECOND tree if one\nis within 6 cells: 12 planks and 8 sticks is your entire wood budget for the\nwhole run, and there is no wood underground.\nPHASE 2 - THE STAIRCASE. dig_down. On each new level, mine 12 cobblestone\nbefore anything else - two {\"act\":\"tunnel\",\"dir\":...,\"n\":6} turns do it. Twelve\ncobblestone is a furnace plus a stone pickaxe plus a spare. Place a table and\ncraft the stone pickaxe the moment you have 3 cobblestone and 2 sticks.\nPHASE 3 - BRANCH MINING, the real technique, and the whole reason to pick me:\n  cut a main corridor with {\"act\":\"tunnel\",\"dir\":\"east\",\"n\":9};\n  next turn step 3 rows north or south and cut a parallel one back.\n  A 5x5 view with 3-row spacing sees every cell in the block. Never dig a\n  diagonal, never wander, never re-cut a corridor you already cut. If \"region\"\n  shows \"?\" to one side, that is the side you sweep next.\nPHASE 4 - IRON. At y=32 you want 3 iron ore and 3 coal. Then build the workshop\nwhere you stand: place_crafting_table, place_furnace, smelt_iron n=3,\ncraft_iron_pickaxe. Materials travel free; you do not.\nPHASE 5 - y=12. Same branch pattern, and read \"known_ore\" every single turn.\nOne \"D\" is worth more than everything you have done put together: drop whatever\nyou are doing, goto it, mine it, and the run ends there in triumph.\nSAFETY. Lava is the only thing that can kill you and it only kills you if you\nwalk into it. When \"nearest.lava\" has d<=2, either place_block into it or\ntunnel the other way - do not path past it. Digging down onto lava is free and\ncosts only the turn, so never fear a dig_down.\nCLOCK. Look at \"ticks_left\" every turn. Under 200 ticks left, stop exploring and\nspend every remaining tick on the cheapest locked rung you can still reach.\n\"notes\": the corridor you are cutting, the rows already swept, table and furnace\nz,x,y, and every unmined ore with its z,x,y.",
+      "PLAYER_POLICY_LABEL": "branchminer"
+    },
+    "player": "ply_bac48eb1-662e-44f8-973d-f3e016dccf5d"
+  },
+  {
+    "name": "minecraft-miner",
+    "run": "/bin/minecraft-player",
+    "env": {
+      "PLAYER_SCRIPTED": "miner",
+      "PLAYER_POLICY_LABEL": "miner"
+    }
+  },
+  {
+    "name": "minecraft-scrounger",
+    "run": "/bin/minecraft-player",
+    "env": {
+      "PLAYER_SCRIPTED": "scrounger",
+      "PLAYER_POLICY_LABEL": "scrounger"
+    }
+  }
+]

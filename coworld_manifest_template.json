@@ -1,0 +1,839 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Metta-AI/metta/main/packages/coworld/src/coworld/coworld_manifest_schema.json",
+  "tags": [
+    "minecraft",
+    "mining",
+    "crafting",
+    "tech-tree",
+    "single-agent",
+    "long-horizon"
+  ],
+  "episode_timeout_minutes": 20,
+  "game": {
+    "name": "minecraft",
+    "replay_viewer": {
+      "bundle": "static-replay-viewer"
+    },
+    "description": "Minecraft, in spirit: one cog alone in a seeded blocky world of four stacked 32x32 levels - surface, stone, iron depth, diamond depth - and the eleven-rung MineRL ObtainDiamond ladder to climb before the clock runs out. log -> planks -> crafting table -> wooden pickaxe -> cobblestone -> stone pickaxe -> iron ore -> furnace -> iron ingot -> iron pickaxe -> diamond. Each rung is worth double every rung beneath it put together, so getting ONE rung deeper beats any combination of the rungs below and the score is exactly the eleven-bit milestone mask times a thousand, with speed as the tie-break. The cog descends by cutting a shaft through the floor and climbs back the same hole; it sees 11x11 on the surface and only 5x5 underground, and a level it has never been to is entirely unknown. Nothing is hunting it, it never eats or sleeps, and the only lethal thing in the world is lava - which kills on a step but not on a blind dig_down. A policy sends up to twelve actions a turn from seventeen primitives and three macros (goto, move, tunnel); a deterministic driver expands them into at most twenty ticks. This is an in-spirit reimplementation of the ObtainDiamond problem as its own deterministic seeded simulator - no Malmo, no MineRL, no MineDojo code is vendored and no score here is comparable to a published benchmark number (see docs/PORTING-MINECRAFT.md).",
+    "owner": "daveey@softmax.com",
+    "runnable": {
+      "type": "game",
+      "image": "{{MINECRAFT_IMAGE}}",
+      "run": [
+        "/bin/minecraft"
+      ],
+      "source_url": "https://github.com/Metta-AI/cogame-minecraft/tree/main",
+      "env": {
+        "ANTHROPIC_API_KEY_URI": "secret://coworld/minecraft/anthropic_api_key"
+      }
+    },
+    "config_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokens",
+        "players"
+      ],
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Per-seat join tokens, injected by the runner."
+        },
+        "players": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "The seat's in-game name."
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Optional per-slot overrides."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "World seed; randomised per episode when unset."
+        },
+        "num_agents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1,
+          "default": 1
+        },
+        "minPlayers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1,
+          "default": 1
+        },
+        "variant": {
+          "type": "string"
+        },
+        "levelCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "default": 4
+        },
+        "levelSize": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 64,
+          "default": 32
+        },
+        "surfaceViewRadius": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 5
+        },
+        "deepViewRadius": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 2
+        },
+        "regionSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 16
+        },
+        "turnTicks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 20
+        },
+        "maxTurns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 400,
+          "default": 48
+        },
+        "maxTicks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999,
+          "default": 960
+        },
+        "veinThreshold": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1023,
+          "default": 600
+        },
+        "caveThresholdStone": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1023,
+          "default": 880
+        },
+        "caveThresholdIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1023,
+          "default": 850
+        },
+        "caveThresholdDiamond": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1023,
+          "default": 830
+        },
+        "lavaChanceIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 12
+        },
+        "lavaChanceDiamond": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 30
+        },
+        "coalChanceStone": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 180
+        },
+        "coalChanceIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 80
+        },
+        "ironChanceIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 140
+        },
+        "ironChanceDiamond": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 110
+        },
+        "diamondChance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 70
+        },
+        "minCoalStone": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 12
+        },
+        "minIronIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 14
+        },
+        "minCoalIron": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 6
+        },
+        "minDiamond": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 8
+        },
+        "minIronDiamond": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 6
+        },
+        "parMilestones": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 11,
+          "default": 6
+        },
+        "maxActionsPerTurn": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 12
+        },
+        "macroPrimitiveCap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 20
+        },
+        "attempt1Ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000,
+          "default": 6000
+        },
+        "retryMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000,
+          "default": 3000
+        },
+        "turnBudgetMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 120000,
+          "default": 9500
+        },
+        "turnSpacingMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000,
+          "default": 2600
+        },
+        "wallClockBudgetSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 660,
+          "default": 660
+        },
+        "lobbyJoinTimeoutTicks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 2400
+        },
+        "startWaitTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "default": 24
+        },
+        "gameOverTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "default": 96
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192,
+          "default": 900
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 1
+        },
+        "fastMode": {
+          "type": "boolean",
+          "default": true
+        },
+        "showPlayerLabels": {
+          "type": "boolean",
+          "default": false
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    },
+    "results_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scores"
+      ],
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "scores": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "win": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "winner": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "deadline",
+            "fault"
+          ]
+        },
+        "endRule": {
+          "type": "string",
+          "enum": [
+            "diamond",
+            "death",
+            "turnCap",
+            "tickCap",
+            "wallClock",
+            "fault"
+          ]
+        },
+        "variant": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "milestoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 11,
+          "maxItems": 11
+        },
+        "milestonePoints": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 11,
+          "maxItems": 11
+        },
+        "milestoneUnlocked": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 11,
+          "maxItems": 11
+        },
+        "milestoneTick": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 11,
+          "maxItems": 11
+        },
+        "milestonesReached": {
+          "type": "integer"
+        },
+        "milestonesOf": {
+          "type": "integer"
+        },
+        "milestoneScore": {
+          "type": "integer"
+        },
+        "parMilestones": {
+          "type": "integer"
+        },
+        "deepestMilestone": {
+          "type": "string",
+          "enum": [
+            "log",
+            "planks",
+            "crafting_table",
+            "wooden_pickaxe",
+            "cobblestone",
+            "stone_pickaxe",
+            "iron_ore",
+            "furnace",
+            "iron_ingot",
+            "iron_pickaxe",
+            "diamond",
+            "none"
+          ]
+        },
+        "deepestTick": {
+          "type": "integer"
+        },
+        "speedBonus": {
+          "type": "integer"
+        },
+        "deathCause": {
+          "type": "string",
+          "enum": [
+            "lava",
+            "none"
+          ]
+        },
+        "deepestLevel": {
+          "type": "integer"
+        },
+        "ticksPerLevel": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "cellsSeen": {
+          "type": "integer"
+        },
+        "cellsTotal": {
+          "type": "integer"
+        },
+        "blocksMined": {
+          "type": "integer"
+        },
+        "blocksPlaced": {
+          "type": "integer"
+        },
+        "itemsCrafted": {
+          "type": "integer"
+        },
+        "ironSmelted": {
+          "type": "integer"
+        },
+        "shaftsDug": {
+          "type": "integer"
+        },
+        "bridgesPlaced": {
+          "type": "integer"
+        },
+        "coalMined": {
+          "type": "integer"
+        },
+        "ironOreMined": {
+          "type": "integer"
+        },
+        "diamondsMined": {
+          "type": "integer"
+        },
+        "invLog": {
+          "type": "integer"
+        },
+        "invPlanks": {
+          "type": "integer"
+        },
+        "invStick": {
+          "type": "integer"
+        },
+        "invCobblestone": {
+          "type": "integer"
+        },
+        "invCoal": {
+          "type": "integer"
+        },
+        "invRawIron": {
+          "type": "integer"
+        },
+        "invIronIngot": {
+          "type": "integer"
+        },
+        "invDiamond": {
+          "type": "integer"
+        },
+        "interrupts": {
+          "type": "integer"
+        },
+        "primitivesExecuted": {
+          "type": "integer"
+        },
+        "actionsDropped": {
+          "type": "integer"
+        },
+        "macrosUnreachable": {
+          "type": "integer"
+        },
+        "repliesRepaired": {
+          "type": "integer"
+        },
+        "finalTick": {
+          "type": "integer"
+        },
+        "turnsPlayed": {
+          "type": "integer"
+        },
+        "toolsOwned": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "wooden_pickaxe",
+              "stone_pickaxe",
+              "iron_pickaxe"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3
+        },
+        "policyKinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "llmTurns": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "fallbackTurns": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "deadSeats": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "stopDetail": {
+          "type": "string"
+        }
+      }
+    },
+    "protocols": {
+      "player": {
+        "type": "uri",
+        "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/PROTOCOL.md"
+      },
+      "global": {
+        "type": "uri",
+        "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/PROTOCOL.md"
+      }
+    },
+    "docs": {
+      "readme": {
+        "type": "uri",
+        "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/README.md"
+      },
+      "pages": [
+        {
+          "id": "rules.md",
+          "title": "Rules",
+          "content": {
+            "type": "uri",
+            "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/RULES.md"
+          }
+        },
+        {
+          "id": "actions.md",
+          "title": "Actions and the reply format",
+          "content": {
+            "type": "uri",
+            "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/ACTIONS.md"
+          }
+        },
+        {
+          "id": "milestones.md",
+          "title": "The ObtainDiamond ladder",
+          "content": {
+            "type": "uri",
+            "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/MILESTONES.md"
+          }
+        },
+        {
+          "id": "porting.md",
+          "title": "What this is and is not a port of",
+          "content": {
+            "type": "uri",
+            "value": "https://github.com/Metta-AI/cogame-minecraft/blob/main/docs/PORTING-MINECRAFT.md"
+          }
+        }
+      ]
+    }
+  },
+  "player": [
+    {
+      "id": "miner",
+      "type": "player",
+      "name": "miner",
+      "description": "The published scripted baseline: a deterministic priority ladder that crafts what it can afford, chops the nearest known tree, walks to the best known ore it has the tier for, digs down the moment a level has nothing left it needs, and otherwise cuts straight branch-mining corridors on a three-row lattice. It never routes through lava and never walks back up a shaft. It is also the server-side fallback when an LLM seat times out twice.",
+      "image": "{{MINECRAFT_IMAGE}}",
+      "run": [
+        "/bin/minecraft-player"
+      ],
+      "source_url": "https://github.com/Metta-AI/cogame-minecraft/tree/main/src/minecraft/baselines.nim",
+      "resources": {
+        "requests": {
+          "cpu": "100m",
+          "memory": "64Mi"
+        },
+        "limits": {
+          "cpu": "1"
+        }
+      }
+    }
+  ],
+  "variants": [
+    {
+      "id": "standard",
+      "name": "ObtainDiamond (1 cog, 960 ticks)",
+      "description": "One cog, four stacked levels of a seeded blocky world, and the famous MineRL ladder: chop a log, craft planks, put down a crafting table, make a wooden pickaxe, mine cobblestone, make a stone pickaxe, find iron, build a furnace, smelt an ingot, make an iron pickaxe, and cut a diamond out of the rock at y=12. You cannot see through the floor, wood only exists on the surface, and lava kills. Every rung is worth double every rung below it put together, so the score is how deep the cog got - and how fast. The clock is 960 ticks and then the run is over wherever it stands.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Alpha"
+          }
+        ],
+        "num_agents": 1,
+        "minPlayers": 1,
+        "levelCount": 4,
+        "levelSize": 32,
+        "surfaceViewRadius": 5,
+        "deepViewRadius": 2,
+        "regionSize": 16,
+        "veinThreshold": 600,
+        "caveThresholdStone": 880,
+        "caveThresholdIron": 850,
+        "caveThresholdDiamond": 830,
+        "minCoalStone": 12,
+        "minIronIron": 14,
+        "minCoalIron": 6,
+        "minDiamond": 8,
+        "minIronDiamond": 6,
+        "maxActionsPerTurn": 12,
+        "macroPrimitiveCap": 20,
+        "variant": "standard",
+        "turnTicks": 20,
+        "maxTurns": 48,
+        "maxTicks": 960,
+        "lavaChanceIron": 12,
+        "lavaChanceDiamond": 30,
+        "coalChanceStone": 180,
+        "coalChanceIron": 80,
+        "ironChanceIron": 140,
+        "ironChanceDiamond": 110,
+        "diamondChance": 70,
+        "parMilestones": 6,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnBudgetMs": 9500,
+        "turnSpacingMs": 2600,
+        "wallClockBudgetSeconds": 660,
+        "lobbyJoinTimeoutTicks": 2400,
+        "fastMode": true,
+        "showPlayerLabels": false
+      }
+    },
+    {
+      "id": "deepcut",
+      "name": "Deep cut (1 cog, two thirds of the clock)",
+      "description": "The same four levels and the same eleven rungs, but only 640 ticks to climb them - and to make that possible the world is half again as rich in coal, iron and diamond, and half again as full of lava. There is no time to explore twice, no time to walk back up for forgotten planks, and no time to path around a lava lake you could have bridged. Score is how far up the ObtainDiamond ladder the cog gets before the clock stops, with speed as the tie-break.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Alpha"
+          }
+        ],
+        "num_agents": 1,
+        "minPlayers": 1,
+        "levelCount": 4,
+        "levelSize": 32,
+        "surfaceViewRadius": 5,
+        "deepViewRadius": 2,
+        "regionSize": 16,
+        "veinThreshold": 600,
+        "caveThresholdStone": 880,
+        "caveThresholdIron": 850,
+        "caveThresholdDiamond": 830,
+        "minCoalStone": 12,
+        "minIronIron": 14,
+        "minCoalIron": 6,
+        "minDiamond": 8,
+        "minIronDiamond": 6,
+        "maxActionsPerTurn": 12,
+        "macroPrimitiveCap": 20,
+        "variant": "deepcut",
+        "turnTicks": 20,
+        "maxTurns": 32,
+        "maxTicks": 640,
+        "lavaChanceIron": 18,
+        "lavaChanceDiamond": 45,
+        "coalChanceStone": 270,
+        "coalChanceIron": 120,
+        "ironChanceIron": 210,
+        "ironChanceDiamond": 165,
+        "diamondChance": 105,
+        "parMilestones": 5,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnBudgetMs": 9500,
+        "turnSpacingMs": 2600,
+        "wallClockBudgetSeconds": 660,
+        "lobbyJoinTimeoutTicks": 2400,
+        "fastMode": true,
+        "showPlayerLabels": false
+      }
+    }
+  ],
+  "certification": {
+    "players": [
+      {
+        "player_id": "miner"
+      }
+    ],
+    "game_config": {
+      "players": [
+        {
+          "name": "Alpha"
+        }
+      ],
+      "num_agents": 1,
+      "minPlayers": 1,
+      "levelCount": 4,
+      "levelSize": 32,
+      "surfaceViewRadius": 5,
+      "deepViewRadius": 2,
+      "regionSize": 16,
+      "veinThreshold": 600,
+      "caveThresholdStone": 880,
+      "caveThresholdIron": 850,
+      "caveThresholdDiamond": 830,
+      "minCoalStone": 12,
+      "minIronIron": 14,
+      "minCoalIron": 6,
+      "minDiamond": 8,
+      "minIronDiamond": 6,
+      "maxActionsPerTurn": 12,
+      "macroPrimitiveCap": 20,
+      "variant": "standard",
+      "seed": 42,
+      "turnTicks": 20,
+      "maxTurns": 48,
+      "maxTicks": 960,
+      "lavaChanceIron": 12,
+      "lavaChanceDiamond": 30,
+      "coalChanceStone": 180,
+      "coalChanceIron": 80,
+      "ironChanceIron": 140,
+      "ironChanceDiamond": 110,
+      "diamondChance": 70,
+      "parMilestones": 6,
+      "attempt1Ms": 6000,
+      "retryMs": 3000,
+      "turnBudgetMs": 9500,
+      "turnSpacingMs": 0,
+      "wallClockBudgetSeconds": 240,
+      "lobbyJoinTimeoutTicks": 600,
+      "fastMode": true,
+      "showPlayerLabels": false
+    }
+  }
+}

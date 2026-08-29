@@ -1,0 +1,14 @@
+{
+  "_comment": "The pick tools/tune_baselines.nim's sweep produced. tests/test_minecraft_driver.nim asserts the shipped DefaultBaselineParams still equal it; ci.yml re-runs the sweep with --check.",
+  "objective": "total milestoneScore of the miner baseline over 40 standard + 40 deepcut seeds",
+  "score": 45838,
+  "rung9_of_standard_seeds": 32,
+  "woodPlanks": 16,
+  "woodSticks": 4,
+  "stoneCobble": 16,
+  "stoneCoal": 3,
+  "sweepLength": 9,
+  "sweepTurns": 3,
+  "latticeSpacing": 2,
+  "valueFirst": true
+}

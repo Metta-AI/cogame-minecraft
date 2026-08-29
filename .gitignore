@@ -1,0 +1,19 @@
+# Build outputs and editor scratch. Everything else in this repo is tracked.
+nim.cfg
+nimcache/
+*.exe
+*.pdb
+*.ilk
+*.out
+out/
+tmp/
+dist/
+node_modules/
+replay-viewer/dist/
+minecraft
+minecraft-player
+*.replay
+*.bitreplay
+# ...but the committed replay fixtures ARE the wasm smoke's evidence.
+!tests/fixtures/*.replay
+.DS_Store
