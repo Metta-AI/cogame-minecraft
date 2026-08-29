@@ -35,11 +35,14 @@ RUN nim c -d:emscripten --path:src replay-viewer/minecraft_replay.nim && \
       -e 's|<!-- BROADCAST_CORE -->|<script src="./static_replay.js"></script>|' \
     client/replay_broadcast.html > replay-viewer/dist/index.html && \
   cp data/art/cog_avatar.png replay-viewer/dist/cog_avatar.png && \
+  cp data/soldier_red_front.png replay-viewer/dist/soldier_red_front.png && \
   mkdir -p replay-viewer/dist/art/walls replay-viewer/dist/art/lockerroom && \
   cp client/art/walls/wall_h.jpg client/art/walls/wall_v.jpg \
     replay-viewer/dist/art/walls/ && \
   cp client/art/lockerroom/bg.jpg client/art/lockerroom/*.webp \
     replay-viewer/dist/art/lockerroom/ && \
+  grep -q 'window.MinecraftStaticReplay' replay-viewer/dist/index.html && \
+  grep -q 'window.MinecraftStaticReplay' replay-viewer/dist/static_replay.js && \
   rm -rf replay-viewer/dist/nimcache && \
   test -f replay-viewer/dist/minecraft_replay.wasm && \
   test -f replay-viewer/dist/minecraft_replay.data && \
@@ -60,6 +63,7 @@ RUN nim c -d:emscripten --path:src replay-viewer/minecraft_replay.nim && \
   ! grep -q '<script src="./minecraft_replay.js"></script>' \
     replay-viewer/dist/index.html && \
   test -f replay-viewer/dist/cog_avatar.png && \
+  test -f replay-viewer/dist/soldier_red_front.png && \
   test -f replay-viewer/dist/art/walls/wall_h.jpg && \
   test -f replay-viewer/dist/art/lockerroom/bg.jpg && \
   test -f replay-viewer/dist/art/lockerroom/red_6.webp

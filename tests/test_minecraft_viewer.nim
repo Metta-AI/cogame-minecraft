@@ -219,6 +219,15 @@ block staticReplayShellIsOneStarter:
   doAssert "'data-replay-error'" in shell
   doAssert "ctf" notin worker and "ctf" notin shell,
     "a stray ctf_ export would call into nothing"
+  # The PAGE must look for the adapter under the name the shell publishes.
+  # A half-done rename here is silent: the page falls through to
+  # window.BroadcastCore, which the static bundle does not load, and the viewer
+  # sits on "CONNECTING" forever with every file 200 (run 33240668656).
+  doAssert "window.MinecraftStaticReplay = {" in shell
+  doAssert "window.CtfStaticReplay" notin page
+  doAssert page.count("window.MinecraftStaticReplay") == 3,
+    "the page reads the adapter name in three places: the bundle detector, " &
+    "the art base and the core factory"
   echo "ok: shell, worker and link flags all come from coworld-ctf"
 
 echo "test_minecraft_viewer: PASS"

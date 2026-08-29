@@ -1616,17 +1616,18 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
   // expression serves all three. Mirrors ART_BASE in league_replayer.html and
   // websocketPathForClientPage() in broadcast_core.js, which map the same
   // /client + /clients route pair the same way. The bundle is detected by its
-  // WASM adapter rather than a URL param: window.CtfStaticReplay only exists
+  // WASM adapter rather than a URL param: window.MinecraftStaticReplay only exists
   // when static_replay.js is on the page.
-  var COG_BASE = window.CtfStaticReplay
+  var COG_BASE = window.MinecraftStaticReplay
     ? '.'
     : location.pathname.replace(/\/clients?\/[^/]*$/, '') + '/client';
+  // MINECRAFT: ONE cog, and it is red. The starter's blue/green/yellow
+  // masters belong to the four-team free-for-all this game deletes, and the
+  // gun master belongs to a weapon it does not have.
   var COG_ART = {}, COG_ART_GUN = {};
-  ['red', 'blue', 'green', 'yellow'].forEach(function (team) {
+  ['red'].forEach(function (team) {
     COG_ART[team] = new Image();
     COG_ART[team].src = COG_BASE + '/soldier_' + team + '_front.png';
-    COG_ART_GUN[team] = new Image();
-    COG_ART_GUN[team].src = COG_BASE + '/soldier_' + team + '_front_gun.png';
   });
   function cogArtReady(img) { return img && img.complete && img.naturalWidth > 0; }
   // Pick the armed pose when it's ready, else the plain one, else null (the
@@ -1736,7 +1737,8 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
                 { f: 6, w: 16.73, h: 21.06 }] }
     };
     var spritesEl = $('lk-sprites');
-    ['green', 'blue', 'yellow', 'red'].forEach(function (bot) {
+    // MINECRAFT: one cog in the workshop, not a four-team locker room.
+    ['red'].forEach(function (bot) {
       var b = LK_BOTS[bot];
       var maxW = 0, maxH = 0;
       b.poses.forEach(function (p) {
@@ -1913,7 +1915,7 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
   // frame yet. The fraction is remembered instead and resolved on the first
   // frame that carries the axis — the same one-shot shape as ?t=.
   var SEEK_FRAC = null;
-  var replayAdapter = window.CtfStaticReplay || null;
+  var replayAdapter = window.MinecraftStaticReplay || null;
   var coreConfig = {
     canvas: canvas,
     onText: function (txt) { onFrame(txt); },
