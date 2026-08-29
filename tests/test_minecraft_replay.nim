@@ -153,7 +153,14 @@ block recordThenRederive:
       if ticks.phase != Playing:
         break
       ticks.step(pNoop)
-    doAssert ticks.endRuleText() in [EndRuleTickCap, EndRuleTurnCap]
+    ## The tick cap is the INDEPENDENT guard: this loop never calls
+    ## noteTurnEnd, so `turnsPlayed` is 0 at tick maxTicks and the rule is
+    ## `tickCap` exactly - not "one of the two". In a real episode every turn
+    ## ends, so the last tick of the last turn is the turn cap and the two
+    ## coincide (design note, End conditions).
+    doAssert ticks.endRuleText() == EndRuleTickCap,
+      "the tick-cap guard stamped " & ticks.endRuleText()
+    doAssert ticks.turnsPlayed == 0
     doAssert ticks.reasonText() == ReasonComplete
   removeDir(dir)
   echo "ok: every end reason records and re-derives with an intact hash chain"
