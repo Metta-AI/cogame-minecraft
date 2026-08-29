@@ -372,19 +372,46 @@ jobs:
         # scar). The fixture loads the SHIPPED bundle in an iframe and drives
         # the REAL drawing code with synthetic frames through the game block's
         # one exported hook; it never re-implements the drawing.
+        #
+        # It is driven by viewer_smoke.mjs --strict-text-bounds, the SAME gate
+        # the main smoke uses, not by a repo-local harness: the fixture sets
+        # data-replay-loaded="true" only after every scenario drew AND its own
+        # string assertions held (the full 160-rune say came back out of the
+        # DOM unshortened and unclipped at 960/640/360 px), and
+        # data-replay-error otherwise. canvas_text stays 0 here by
+        # construction - this viewer has no fillText/strokeText anywhere - so
+        # the DOM assertions inside the fixture are the half of item 15 that
+        # can actually fail.
         run: |
           set -euo pipefail
+          out="$PWD/dist/static-replay-viewer"
           test -s tools/ci/renderer_fixture.html
-          test -s tools/ci/fixture_smoke.mjs
           replay=""
           for candidate in dist/smoke/*.replay dist/smoke/replay.json; do
             if [ -f "${candidate}" ]; then replay="${candidate}"; break; fi
           done
           test -n "${replay}"
-          node tools/ci/fixture_smoke.mjs \
-            --bundle dist/static-replay-viewer \
-            --replay "${replay}" \
-            --timeout 90
+          # The fixture is served FROM the bundle directory so its iframe
+          # resolves ./index.html against the real bundle, exactly as the
+          # platform serves it.
+          cp tools/ci/renderer_fixture.html "${out}/_renderer_fixture.html"
+          cp "${replay}" "${out}/fixture.replay"
+          python3 -m http.server 8231 --bind 127.0.0.1 --directory "${out}" \
+            > fixture-server.log 2>&1 &
+          server=$!
+          trap 'kill "${server}" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:8231/index.html" -o /dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+          mkdir -p fixture-evidence
+          node tools/ci/viewer_smoke.mjs \
+            --url "http://127.0.0.1:8231/_renderer_fixture.html?replay=http%3A%2F%2F127.0.0.1%3A8231%2Ffixture.replay" \
+            --timeout 90 \
+            --strict-text-bounds \
+            --out "$PWD/fixture-evidence"
 
       - name: Run the emitted wasm module headlessly against the fixtures
         # wasm32-only failures (integer traps, address-space exhaustion) are
@@ -408,7 +435,7 @@ jobs:
           path: |
             viewer-smoke.png
             viewer-smoke.json
-            fixture-smoke.png
+            fixture-evidence/
           if-no-files-found: warn
           retention-days: 14
 

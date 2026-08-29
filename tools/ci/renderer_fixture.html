@@ -30,8 +30,20 @@
     * a lava-death endcard, an `11 OF 11` diamond endcard, and a turnCap
       endcard.
 
-  It sets data-fixture="ok" on <html> when every scenario drew without
-  throwing, and data-fixture-error="<message>" on the first failure.
+  It ASSERTS ITS OWN STRINGS. A fixture that quietly renders a shortened
+  remark passes while testing nothing, so after every scenario it reads the
+  narration row back OUT of the iframe and fails unless the drawn string is
+  the full-cap 160-rune say, character for character, in a row that is not
+  clipped and whose box is inside the frame. That check is the DOM half of
+  `viewer_smoke.mjs --strict-text-bounds`: this viewer draws NO canvas text at
+  all (there is no fillText/strokeText in the page or in broadcast_core.js,
+  asserted by tests/test_minecraft_viewer.nim), so the canvas_text counters
+  are legitimately 0 and the strings that can go missing are DOM strings.
+
+  Signals, so `viewer_smoke.mjs --url <this page> --strict-text-bounds` is the
+  harness that drives it: data-replay-loaded="true" on <html> when every
+  scenario drew and every assertion held, data-replay-error="<message>" on the
+  first failure. (data-fixture / data-fixture-error carry the same verdict.)
 -->
 <iframe id="frame" width="960" height="540"></iframe>
 <div id="log">starting…</div>
@@ -51,7 +63,11 @@
   function fail(message) {
     document.documentElement.setAttribute('data-fixture-error', String(message));
     document.documentElement.setAttribute('data-fixture', 'failed');
+    // The signal viewer_smoke.mjs reads. Both are set: the fixture must fail
+    // whichever harness is pointed at it.
+    document.documentElement.setAttribute('data-replay-error', String(message));
     say('FAIL ' + message);
+    if (window.console) console.error('fixture: ' + message);
   }
 
   function ladder(litUpTo) {
@@ -77,13 +93,16 @@
     return rows;
   }
 
-  // A full-cap 160-rune say, built from 4-byte emoji + ASCII so the feed row
-  // is exercised at exactly the cap the engine truncates to.
+  // A full-cap say: EXACTLY MaxSayRunes = 160 runes, two of them 4-byte
+  // emoji, so the feed row is exercised at exactly the cap sanitizeSay
+  // truncates to and a shortened render is visible as a length mismatch.
+  var MAX_SAY_RUNES = 160;
   var FULL_SAY = (function () {
     var s = '';
-    while (s.length < 150) s += 'iron in the wall and a table already down - ';
-    return s.slice(0, 150) + '\u{1F600}\u{1F600}';
+    while (s.length < 158) s += 'iron in the wall and a table already down - ';
+    return s.slice(0, 158) + '\u{1F600}\u{1F600}';
   })();
+  var SAY_RUNES = Array.from(FULL_SAY).length;
 
   function state(opts) {
     var z = opts.z || 0;
@@ -159,19 +178,99 @@
     { k: 'end', t: 960, milestones: 8 }
   ];
 
-  function drive(win) {
+  function settle(ms) {
+    // A layout frame plus `ms`. Two things need it: the page's own relayout()
+    // runs on the iframe's resize event and toggles #stage.tiny, and a fresh
+    // feed row PLAYS AN ENTRANCE ANIMATION (`feedin`, 250 ms, starting 30u to
+    // the right). Measuring a row mid-slide would report a box outside the
+    // frame that is outside by design, which is exactly the distinction
+    // viewer_smoke.mjs draws between `outside` and `never_inside`, so every
+    // geometry read below happens after the animation has settled.
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () { setTimeout(resolve, ms || 50); });
+    });
+  }
+
+  // THE FIXTURE ASSERTS ITS OWN STRINGS. Read the narration row back out of
+  // the iframe: the drawn text must be the whole 160-rune say, the row must
+  // not be clipped, and its box must be inside the frame. A quietly shortened
+  // remark is exactly what leaves a fixture passing while testing nothing.
+  function checkNarration(doc, width, name, expected) {
+    var span = doc.querySelector('#killfeed .feed-row .mc-say');
+    if (!span) {
+      throw new Error('no narration row drawn for "' + name + '" at ' +
+        width + 'px');
+    }
+    var drawn = span.textContent.replace(/^\u201c/, '').replace(/\u201d$/, '');
+    if (drawn !== expected) {
+      throw new Error('the drawn say is ' + Array.from(drawn).length +
+        ' runes, the state carried ' + Array.from(expected).length +
+        ' ("' + name + '" at ' + width + 'px)');
+    }
+    var row = span.parentNode;
+    while (row && row.className.indexOf('feed-row') < 0) row = row.parentNode;
+    if (!row) throw new Error('the say span is not inside a feed row');
+    if (row.scrollHeight > row.clientHeight + 2 ||
+        row.scrollWidth > row.clientWidth + 2) {
+      throw new Error('the narration row is CLIPPED at ' + width + 'px: ' +
+        row.scrollWidth + 'x' + row.scrollHeight + ' of text in a ' +
+        row.clientWidth + 'x' + row.clientHeight + ' box - a sentence that ' +
+        'ellipsises is a box that is too small');
+    }
+    var rect = row.getBoundingClientRect();
+    var win = doc.defaultView;
+    if (rect.width < 1 || rect.height < 1) {
+      throw new Error('the narration row has no box at ' + width + 'px');
+    }
+    if (rect.top < -1 || rect.left < -1 ||
+        rect.bottom > win.innerHeight + 1 || rect.right > win.innerWidth + 1) {
+      throw new Error('the narration row is outside the frame at ' + width +
+        'px: ' + JSON.stringify(rect.toJSON ? rect.toJSON() : rect) +
+        ' in ' + win.innerWidth + 'x' + win.innerHeight);
+    }
+    return Array.from(drawn).length;
+  }
+
+  function checkEndcard(doc, width, name, opts) {
+    var head = doc.getElementById('ec-headline');
+    if (!head || !head.textContent.trim()) {
+      throw new Error('the endcard headline is empty for "' + name + '"');
+    }
+    if (head.textContent.indexOf(String(opts.tick)) < 0) {
+      throw new Error('the endcard headline for "' + name + '" does not ' +
+        'carry its tick: "' + head.textContent + '"');
+    }
+  }
+
+  async function drive(win) {
     var chrome = win.MinecraftChrome;
     if (!chrome || typeof chrome.__fixture !== 'function') {
       throw new Error('the bundle exposes no MinecraftChrome.__fixture hook');
     }
+    if (SAY_RUNES !== MAX_SAY_RUNES) {
+      throw new Error('the fixture\'s own say is ' + SAY_RUNES +
+        ' runes, not the ' + MAX_SAY_RUNES + '-rune cap it must exercise');
+    }
+    var doc = win.document;
     for (var w = 0; w < WIDTHS.length; w++) {
       frame.width = WIDTHS[w];
       frame.height = Math.round(WIDTHS[w] * 9 / 16);
+      await settle(120);
       for (var i = 0; i < SCENARIOS.length; i++) {
         var opts = SCENARIOS[i].opts;
         opts.beats = BEATS;
+        var expected = opts.say === undefined ? FULL_SAY : opts.say;
         chrome.__fixture(state(opts));
-        say('drew "' + SCENARIOS[i].name + '" at ' + WIDTHS[w] + 'px');
+        await settle(320);          // let `feedin` finish before measuring
+        var runes = 0;
+        if (expected) {
+          runes = checkNarration(doc, WIDTHS[w], SCENARIOS[i].name, expected);
+        }
+        if (opts.ph === 'gameover') {
+          checkEndcard(doc, WIDTHS[w], SCENARIOS[i].name, opts);
+        }
+        say('drew "' + SCENARIOS[i].name + '" at ' + WIDTHS[w] + 'px' +
+          (runes ? ' (' + runes + ' runes of say, unclipped)' : ''));
       }
     }
   }
@@ -198,9 +297,16 @@
           return;
         }
         if (ready && win.MinecraftChrome) {
-          drive(win);
-          document.documentElement.setAttribute('data-fixture', 'ok');
-          say('OK ' + (WIDTHS.length * SCENARIOS.length) + ' frames drawn');
+          drive(win).then(function () {
+            document.documentElement.setAttribute('data-fixture', 'ok');
+            // The signal viewer_smoke.mjs waits for. It is set ONLY after
+            // every scenario drew and every string assertion held.
+            document.documentElement.setAttribute('data-replay-loaded', 'true');
+            say('OK ' + (WIDTHS.length * SCENARIOS.length) +
+              ' frames drawn, ' + SAY_RUNES + '-rune say intact at every width');
+          }, function (error) {
+            fail(error && error.message ? error.message : String(error));
+          });
           return;
         }
       } catch (error) {

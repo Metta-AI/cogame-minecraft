@@ -197,6 +197,20 @@ block transportAndTinyRules:
   doAssert "width: 56px; height: 56px" in block1
   doAssert "#stage.tiny #fpv-grip { display: none; }" in block1
   doAssert "#stage.tiny #zoombar { display: none; }" in block1
+  # The narration band. Item 15's rule: a SENTENCE that ellipsises is a box
+  # that is too small, so the `say` row wraps inside a band reserved from
+  # MaxSayRunes instead of inheriting the badge rows' one-line ellipsis.
+  # tools/ci/renderer_fixture.html drives a full-cap say through it at
+  # 960/640/360 px and fails if the rendered string comes back short.
+  let narration = block1.find(".feed-row.mc-narration {")
+  doAssert narration > 0, "the say row has no reserved band"
+  let band = block1[narration ..< block1.find("}", narration)]
+  doAssert "white-space: normal" in band, "a say must WRAP, never ellipsise"
+  doAssert "text-overflow: clip" in band
+  doAssert "min-height:" in band, "the band is reserved whether or not the " &
+    "cog is speaking, so the feed does not jump when a remark lands"
+  doAssert "'mc-narration');" in block1,
+    "the say row must be built with the narration class"
   echo "ok: the transport, the endcard and the six 360 px rules"
 
 # 44. `no canvas text on the board layer`

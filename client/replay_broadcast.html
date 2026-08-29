@@ -4357,6 +4357,24 @@ button.beat-marker {
 .feed-row .mc-rung { color: var(--amber); letter-spacing: 0.08em; }
 .feed-row .mc-say { color: var(--paper); font-style: italic; }
 .feed-row { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A cog's `say` is a SENTENCE, not a nameplate. Ellipsising it on one line
+   the way the badge rows above are ellipsised would silently eat most of the
+   only LLM-authored string this viewer ever draws, so the narration row gets
+   a RESERVED BAND instead: it stretches to the feed's width, wraps, and
+   reserves four lines - MaxSayRunes (160) at this row's 8u pixel font is
+   about 44 runes a line - whether or not the cog is speaking, so the feed
+   does not jump when a remark lands. tools/ci/renderer_fixture.html drives a
+   full-cap say through this rule at 960/640/360 px and fails if the rendered
+   string is short or the row is clipped. */
+.feed-row.mc-narration {
+  align-self: stretch;
+  align-items: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  line-height: 1.25;
+  min-height: calc(4 * 10 * var(--u));
+}
 
 /* --- legible at 360px --------------------------------------------------- */
 /* relayout() toggles #stage.tiny at boardW <= 620 and sets --hudscale; both
@@ -4872,7 +4890,8 @@ button.beat-marker {
       }
       if (d.say) {
         feedRow('<span class="who red">Alpha</span><span class="glyph">:</span>' +
-          '<span class="mc-say">\u201c' + CTX.esc(d.say) + '\u201d</span>');
+          '<span class="mc-say">\u201c' + CTX.esc(d.say) + '\u201d</span>',
+          'mc-narration');
       }
     }
   }
