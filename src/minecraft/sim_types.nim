@@ -15,8 +15,11 @@
 import std/[strutils, unicode]
 
 const
-  GameVersion* = "2"
+  GameVersion* = "3"
     ## Changelog, PREPEND ONLY (the starter's discipline):
+    ##   3 - no dead seeds: post-pass 2b opens a tier-0 route from spawn to a
+    ##       tree, so a water-ringed spawn can no longer score zero for every
+    ##       policy (35 of 300 standard seeds were sealed like that).
     ##   2 - lava is a live hazard: the generator's cave gate for lava rises
     ##       from 120 to 300, so lava exists on 98% of seeds instead of 32%.
     ##   1 - first release: the eleven-rung ObtainDiamond ladder over four

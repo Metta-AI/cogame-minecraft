@@ -814,7 +814,7 @@
       "maxActionsPerTurn": 12,
       "macroPrimitiveCap": 20,
       "variant": "standard",
-      "seed": 674,
+      "seed": 42,
       "turnTicks": 20,
       "maxTurns": 48,
       "maxTicks": 960,

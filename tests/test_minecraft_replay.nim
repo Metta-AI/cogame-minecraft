@@ -120,12 +120,12 @@ block recordThenRederive:
   # re-generates its world from the config, so only the generator's own lava
   # can be re-derived.
   for (name, config, stop, after, expect) in [
-      ("turnCap", standardConfig(42), "", 0, EndRuleTurnCap),
-      ("diamond", standardConfig(18), "", 0, EndRuleDiamond),
+      ("turnCap", standardConfig(8), "", 0, EndRuleTurnCap),
+      ("diamond", standardConfig(42), "", 0, EndRuleDiamond),
       ("death", standardConfig(4), "", 0, EndRuleDeath),
-      ("wallClock", standardConfig(42), EndRuleWallClock, 200,
+      ("wallClock", standardConfig(8), EndRuleWallClock, 200,
         EndRuleWallClock),
-      ("fault", standardConfig(42), EndRuleFault, 150, EndRuleFault)]:
+      ("fault", standardConfig(8), EndRuleFault, 150, EndRuleFault)]:
     let path = dir / (name & ".replay")
     let recorded = record(config, path, stop, after)
     doAssert recorded.endRule == expect,

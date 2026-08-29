@@ -329,7 +329,8 @@ block minerBeatsScrounger:
     minerDeep = 0
     scroungerAtLeastOne = 0
     seeds = 0
-  for seed in 1 .. 50:
+  # 100 seeds of each variant, the number the note asks for.
+  for seed in 1 .. 100:
     for deep in [false, true]:
       let config = testConfig(seed * 7 + 1, deep)
       let a = playScripted(config, blMiner)

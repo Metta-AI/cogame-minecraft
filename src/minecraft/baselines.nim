@@ -43,9 +43,9 @@ const DefaultBaselineParams* = BaselineParams(
   ## candidates over 40 standard + 40 deepcut seeds and this one scored
   ## highest. `tools/ci/baseline_tuning.json` records it and
   ## `tests/test_minecraft_driver.nim` asserts the two still agree.
-  woodPlanks: 8,
+  woodPlanks: 16,
   woodSticks: 4,
-  stoneCobble: 12,
+  stoneCobble: 16,
   stoneCoal: 3,
   sweepLength: 9,
   sweepTurns: 3,

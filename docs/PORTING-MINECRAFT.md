@@ -161,22 +161,23 @@ the note's.
 
 - The scripted `miner` now dies in lava on about one standard seed in ten
   (0 of 100 before), and its swept total over the 40 + 40 seed battery falls
-  from 37 374 to 34 654. `tools/tune_baselines.nim` was re-run: the pick moves
-  from `woodSticks: 6` to `woodSticks: 4`, and `tools/ci/baseline_tuning.json`
-  and `DefaultBaselineParams` are re-pinned to it.
+  from 37 374 to 35 528. `tools/tune_baselines.nim` was re-run and
+  `tools/ci/baseline_tuning.json` and `DefaultBaselineParams` are re-pinned to
+  the new pick (`woodPlanks: 16`, `woodSticks: 4`, `stoneCobble: 16`).
 - The sweep exposed a real defect in the baseline that no seed had reached
   before: `safestStep` returned `fcNorth` when the cog was boxed in with **no**
   traversable neighbour, which walked it into the lava it was fleeing. It now
   reports "no safe step" and the miner mines its way out instead.
-- The **certification seed moves from 8 to 674** (divergence G): under the new
-  gate, seed 674's scripted episode reaches ten rungs, `z = 3`, 941 ticks, and
-  emits a `lava` event, so the design note's test-26 lava clause is asserted
-  rather than documented away.
+- The **certification seed goes back to the note's 42** (divergence G): under
+  the new gate and the re-swept baseline, seed 42's scripted episode takes all
+  eleven rungs, reaches `z = 3` in 532 ticks and emits a `lava` event, so the
+  design note's test-26 lava clause is asserted rather than documented away.
 
 Every level is still at least 78 % diggable (`unsealLava`, post-pass 5), every
-seed is still completable (`tests/test_minecraft_world.nim`'s reachability
-flood over 60 seeds of both variants), and the `miner` baseline still clears
-rung 9 on 38 of 50 standard seeds.
+seed is still completable — `tests/test_minecraft_world.nim` now plays the
+whole ladder with an omniscient reference solver on 60 seeds of both variants
+(divergence O) — and the `miner` baseline still clears rung 9 on 79 of 100
+standard seeds.
 
 One thing the higher gate does **not** make common is the *interrupt* (tick
 step 8): it fires only on lava that becomes newly known while already within
@@ -212,21 +213,22 @@ writer and `runResultsJson` — with the websockets left out.
 `tools/ci/docker_smoke.sh` covers the socket path end to end, in the
 production image, on every CI run.
 
-## G. The certification fixture's seed is 674, not 42
+## G. The certification fixture's seed is the note's 42 (it did move, twice)
 
-The design note pins `seed: 42` for the certification fixture and asks that the
-episode it produces reach at least seven rungs, descend to at least `z = 2`,
-run at least 400 ticks and emit at least one `lava` event, so the CI smoke
-replay always exercises the milestone, new-depth, blocked and lava paths and
-always outlasts the ten-second viewer soak. Under the corrected 30-bit `mix64`
-(divergence H) seed 42 reaches six rungs. Seed 674 reaches **ten**, descends to
-`z = 3`, runs **941** ticks, mines fifteen ore blocks and emits a `lava` event
-under the divergence-C gate, so every clause of the note's test 26 is now
-asserted and none of it is documented away. `tools/probe_seeds.nim` is the
-committed probe that picked it (its filter is exactly the note's list of clauses, lava
-included) and `tests/test_minecraft_engine.nim` asserts every one of those
-properties against whatever seed the manifest actually declares, so the two can
-never drift.
+The design note pins `seed: 42` for the certification fixture and asks that
+the episode it produces reach at least seven rungs, descend to at least
+`z = 2`, run at least 400 ticks and emit at least one `lava` event. Under the
+first cut of the sim seed 42 reached six rungs and no seed emitted a `lava`
+event at all, so the fixture was cut on seed 8 with the lava clause recorded
+as unsatisfiable. Both causes are gone — divergence C made lava real and the
+re-swept baseline goes deeper — and seed 42 now takes **all eleven rungs**,
+reaches `z = 3` in **532** ticks and emits a `lava` event, so the manifest is
+back on the note's seed and every clause of test 26 is asserted.
+
+`tools/probe_seeds.nim` is the committed probe (its filter is exactly the
+note's list of clauses, lava included) and `tests/test_minecraft_engine.nim`
+asserts every one of those properties against whatever seed the manifest
+actually declares, so the two can never drift.
 
 ## H. `mix64` is masked to 30 bits, not 63
 
@@ -372,3 +374,27 @@ in `coworld_manifest_template.json`'s `results_schema`, exactly as
 `tests/test_minecraft_engine.nim` asserts the written key set equals the
 declared key set with nothing extra and nothing missing, so the code and the
 schema cannot drift apart.
+
+## O. Post-pass 2b: a tier-0 route to wood, which the note does not specify
+
+The note's post-pass plants trees but never says the cog has to be able to
+REACH one, and the note's conclusion — "every seed is completable" — is false
+without it. Water is neither walkable nor mineable, and the only way to cross
+it is `place_block`, which costs a cobblestone; getting a cobblestone needs a
+wooden pickaxe, which needs planks, which need a log, which only the surface
+has. A spawn ringed by water is therefore a seed on which **every policy
+scores zero**, and the reference solver added for test 3 found them
+immediately: **35 of 300** standard seeds were sealed like that.
+
+`src/minecraft/world.nim`'s `openSurfaceRoute` runs between post-pass 2 and
+post-pass 3. On a seed that already has a walkable route from spawn to a tree
+it does **nothing**. On a sealed one it takes the cheapest route to the
+nearest tree — fewest blocking cells, ties by cell index, so it is
+deterministic and seed-pure — and turns the water on it to **sand** and the
+rock on it to **grass**. Nothing else changes: the bedrock ring, the forced
+grass 3 x 3, the tree count and the ore minima are all untouched, and
+`tests/test_minecraft_world.nim` asserts the route exists on every one of its
+200 seeds by playing the ladder to the diamond on 60 of them.
+
+That is a generator change, so it carries its own `GameVersion` bump (2 -> 3),
+a re-run of the baseline sweep and a re-cut of both replay fixtures.

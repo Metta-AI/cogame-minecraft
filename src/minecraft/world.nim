@@ -8,7 +8,7 @@
 ## native and in wasm, which is what makes the replay's per-tick hash chain
 ## re-derivable in the browser.
 
-import std/[algorithm]
+import std/[algorithm, heapqueue]
 
 import sim_types
 
@@ -202,6 +202,79 @@ proc unsealLava(world: var World, seed, z, floorCells: int) =
       break
     world.setBlock(bestX, bestY, z, bkStone)
 
+proc openSurfaceRoute(world: var World, spawnX, spawnY: int) =
+  ## Post-pass 2b: GUARANTEE A TIER-0 ROUTE TO WOOD.
+  ##
+  ## Wood exists only on the surface and nothing underground can be reached
+  ## without it: no log, no planks, no wooden pickaxe, and `dig_down` refuses
+  ## the stone under spawn for want of a tier. A spawn ringed by water (which
+  ## is neither walkable nor mineable) is therefore a DEAD SEED that scores
+  ## zero for every policy, and 35 of 300 standard seeds were exactly that.
+  ## The note's own promise is "every seed is completable".
+  ##
+  ## If no tree is reachable from spawn through walkable cells, the cheapest
+  ## route to one - fewest blocking cells, then the lowest cell index, so it
+  ## is deterministic - has its water turned to sand and its rock to grass.
+  ## Nothing else on the surface is touched, and the pass does nothing at all
+  ## on a seed that already has a route.
+  const Passable = {bkGrass, bkSand, bkTunnel}
+  let size = world.levelSize
+  var
+    cost = newSeq[int](size * size)
+    prev = newSeq[int](size * size)
+  for i in 0 ..< cost.len:
+    cost[i] = high(int)
+    prev[i] = -1
+  var queue = initHeapQueue[(int, int)]()
+  let start = spawnY * size + spawnX
+  cost[start] = 0
+  queue.push((0, start))
+  var
+    bestTree = -1
+    bestCost = high(int)
+  while queue.len > 0:
+    let (spent, index) = queue.pop()
+    if spent > cost[index]:
+      continue
+    let
+      cx = index mod size
+      cy = index div size
+    if world.at(cx, cy, 0) == bkTree and spent < bestCost:
+      bestCost = spent
+      bestTree = index
+      if spent == 0:
+        break                     ## already reachable: change nothing
+    for facing in [fcNorth, fcEast, fcSouth, fcWest]:
+      let
+        nx = cx + facing.dx()
+        ny = cy + facing.dy()
+      if nx < 1 or ny < 1 or nx >= size - 1 or ny >= size - 1:
+        continue
+      let cell = world.at(nx, ny, 0)
+      if cell == bkBedrock:
+        continue
+      ## A tree is the destination and costs nothing to stand beside; water
+      ## and rock are what the route has to open.
+      let step = if cell in Passable or cell == bkTree: 0 else: 1
+      let next = ny * size + nx
+      if spent + step < cost[next]:
+        cost[next] = spent + step
+        prev[next] = index
+        queue.push((spent + step, next))
+  if bestTree < 0 or bestCost == 0:
+    return
+  var cursor = bestTree
+  while cursor >= 0 and cursor != start:
+    let
+      cx = cursor mod size
+      cy = cursor div size
+      cell = world.at(cx, cy, 0)
+    if cell == bkWater:
+      world.setBlock(cx, cy, 0, bkSand)
+    elif cell notin Passable and cell != bkTree:
+      world.setBlock(cx, cy, 0, bkGrass)
+    cursor = prev[cursor]
+
 proc spawnCell*(world: World): Cell =
   Cell(x: world.levelSize div 2, y: world.levelSize div 2, z: 0)
 
@@ -300,6 +373,9 @@ proc generateWorld*(config: GameConfig): World =
           break plantAny
     if not planted:
       break
+
+  # 2b. ...and it has to be REACHABLE without a pickaxe, or the seed is dead.
+  result.openSurfaceRoute(spawn.x, spawn.y)
 
   # 3. The floor under spawn is always stone: the first dig_down is the
   #    cobblestone rung and never drops the cog into a cave or onto lava.
