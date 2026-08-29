@@ -14,7 +14,9 @@
 ## INVALID ACTIONS ARE DROPPED, NEVER REWRITTEN. Turning a malformed `goto`
 ## into a `move_south` could walk the cog into lava on the game's own
 ## initiative, so the entry is removed, counted in `repliesRepaired`, and
-## reported back as `dropped` next turn.
+## reported back as `dropped` next turn. An entry past `maxActionsPerTurn` is
+## dropped too, but it is a different fact about the reply and is counted
+## apart, in `actionsDropped`.
 
 import std/[json, strutils, unicode]
 
@@ -46,7 +48,8 @@ type
     notes*: string
     source*: DirectiveSource
     latencyMs*: int
-    dropped*: int
+    dropped*: int       ## entries past `maxActionsPerTurn` (`actionsDropped`)
+    repaired*: int      ## entries that did not validate (`repliesRepaired`)
     truncatedActions*: bool
 
   DirectiveError* = object of ValueError
@@ -221,7 +224,11 @@ proc parsePlan*(payload: JsonNode, maxActions, levelSize: int): Plan =
       if parsed.ok:
         result.actions.add(parsed.action)
       else:
-        inc result.dropped
+        ## Cause (b): the entry does not validate. Counted SEPARATELY from
+        ## the over-cap drops above, because `results` reports the two as
+        ## `actionsDropped` and `repliesRepaired` and they answer different
+        ## questions about a policy.
+        inc result.repaired
 
 proc actionJson*(action: PlanAction): JsonNode =
   case action.kind

@@ -187,7 +187,9 @@ block replyValidation:
     cap, size)
   doAssert dropped.actions.len == 1
   doAssert dropped.actions[0].primitive == pMine
-  doAssert dropped.dropped == 2
+  # cause (b): they did not validate, so they are REPAIRED, not over-cap drops
+  doAssert dropped.repaired == 2
+  doAssert dropped.dropped == 0
   # clamps goto coordinates and every n
   let clamped = parsePlan(extractJsonObject("""
     {"actions":[{"act":"goto","x":-5,"y":900},{"act":"mine","n":99},
@@ -236,7 +238,9 @@ block replyValidation:
   let capped = parsePlan(extractJsonObject(many), cap, size)
   doAssert capped.actions.len == cap
   doAssert capped.truncatedActions
+  # cause (a): 30 entries past a cap of 12 - over-cap drops, nothing invalid
   doAssert capped.dropped == 18
+  doAssert capped.repaired == 0
   # RUNE-boundary truncation at 160/400 with 4-byte emoji ON the boundary
   let emoji = "\u{1F600}"
   doAssert emoji.runeLen == 1 and emoji.len == 4

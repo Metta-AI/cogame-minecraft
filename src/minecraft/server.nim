@@ -614,10 +614,10 @@ proc runServerLoop*(host = "0.0.0.0", port = 8080,
         let expanded = expandPlan(sim, plan)
         queue = expanded.queue
         sim.lastPlan.truncated = expanded.truncated or plan.truncatedActions
-        sim.lastPlan.dropped = plan.dropped
+        sim.lastPlan.dropped = plan.dropped + plan.repaired
         sim.lastPlan.unreachable = expanded.unreachable
         sim.actionsDropped += plan.dropped
-        sim.repliesRepaired += plan.dropped
+        sim.repliesRepaired += plan.repaired
         sim.macrosUnreachable += expanded.unreachable
         if plan.notes.len > 0:
           sim.lastPlan.notes = plan.notes
