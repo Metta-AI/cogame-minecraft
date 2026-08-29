@@ -35,18 +35,30 @@ block gameBlock:
   doAssert game["runnable"]["image"].getStr == "{{MINECRAFT_IMAGE}}"
   doAssert game["runnable"]["env"]["ANTHROPIC_API_KEY_URI"].getStr ==
     "secret://coworld/minecraft/anthropic_api_key"
+  # `uri`, not `text`, for every docs and protocol entry. The acceptance
+  # checklist spells the SHAPE with "type":"text"; the design note prescribes
+  # `uri` for all six of these entries, and the precedent that settles it is
+  # the starter's own shipped, certified manifest -
+  # coworld-ctf/coworld_manifest_paintbot.json - whose game.docs.readme,
+  # game.docs.pages[].content, game.protocols.player and .global are all
+  # {"type":"uri","value":"https://github.com/..."}. What the checklist is
+  # protecting is the STRUCTURE (readme + pages with id/title/content, and
+  # BOTH protocol keys as objects), and that is what is asserted here.
   for key in ["player", "global"]:
     doAssert game["protocols"].hasKey(key),
       "game.protocols carries BOTH player and global"
     doAssert game["protocols"][key].kind == JObject,
       "a protocol is an OBJECT, never a bare string"
     doAssert game["protocols"][key]["type"].getStr == "uri"
-    doAssert game["protocols"][key]["value"].getStr.len > 0
+    doAssert game["protocols"][key]["value"].getStr.startsWith("https://"),
+      "a uri-typed entry must carry a fetchable URL"
   doAssert game["docs"]["readme"]["type"].getStr == "uri"
+  doAssert game["docs"]["readme"]["value"].getStr.startsWith("https://")
   doAssert game["docs"]["pages"].len >= 4
   for page in game["docs"]["pages"]:
     doAssert page.hasKey("id") and page.hasKey("title")
     doAssert page["content"]["type"].getStr == "uri"
+    doAssert page["content"]["value"].getStr.startsWith("https://")
   echo "ok: the game block"
 
 block configSchema:
