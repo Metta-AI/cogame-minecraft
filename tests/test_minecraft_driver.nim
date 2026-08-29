@@ -257,6 +257,19 @@ block replyValidation:
   doAssert capped2.say.validateUtf8() == -1, "a byte cut would break UTF-8"
   doAssert capped2.notes.validateUtf8() == -1
   doAssert capped2.say.len == MaxSayRunes * 4
+  # MaxReplyBytes is a SIZE bound, so it is measured in bytes - but still cut
+  # on a rune boundary. 4096 runes of 4-byte emoji would be 16 KiB.
+  var hugeReply = ""
+  for i in 0 ..< 4000:
+    hugeReply.add(emoji)
+  let bounded = hugeReply.truncateBytes(MaxReplyBytes)
+  doAssert bounded.len <= MaxReplyBytes,
+    "the provider cap admitted " & $bounded.len & " bytes"
+  doAssert bounded.len > MaxReplyBytes - 4, "the cap cut far too much"
+  doAssert bounded.validateUtf8() == -1, "a byte cut split a codepoint"
+  doAssert bounded.runeLen == MaxReplyBytes div 4
+  # a reply already under the cap is returned untouched, bytes and all
+  doAssert "iron in the wall".truncateBytes(MaxReplyBytes) == "iron in the wall"
   echo "ok: the validator drops, clamps, normalises and truncates on RUNES"
 
 # 23. `baseline tuning is the swept pick`

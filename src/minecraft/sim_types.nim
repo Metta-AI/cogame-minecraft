@@ -336,6 +336,21 @@ proc truncateRunes*(text: string, limit: int): string =
     return text
   text.runeSubStr(0, limit)
 
+proc truncateBytes*(text: string, limit: int): string =
+  ## Cuts `text` to at most `limit` BYTES, still on a RUNE boundary: the cap
+  ## that is a size bound rather than a length bound (`MaxReplyBytes`, the
+  ## provider's reply) is a byte cap by definition, and 4096 runes of 4-byte
+  ## codepoints is 16 KiB, not 4 KiB. Never splits a codepoint, so item 9's
+  ## rune discipline still holds.
+  if limit <= 0:
+    return ""
+  if text.len <= limit:
+    return text
+  var cut = limit
+  while cut > 0 and (text[cut].uint8 and 0b1100_0000'u8) == 0b1000_0000'u8:
+    dec cut
+  text[0 ..< cut]
+
 const Mix64Mask* = 0x3FFF_FFFF
   ## 30 bits. `mix64` is read as an `int`, and the sim compiles BOTH natively
   ## (64-bit int) and to wasm32 (32-BIT int). Masking to 63 bits produced a

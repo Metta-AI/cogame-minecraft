@@ -202,8 +202,10 @@ proc textOf*(client: LlmClient, response: Response, error, url: string): string 
       if contentBlock{"type"}.getStr() == "text":
         text.add(contentBlock{"text"}.getStr())
   ## The whole reply is capped at MaxReplyBytes read from the provider before
-  ## parsing, on a RUNE boundary so the cap can never split a codepoint.
-  result = text.truncateRunes(MaxReplyBytes)
+  ## parsing: a BYTE cap, as the note's reply-schema table specifies, taken on
+  ## a rune boundary so it can never split a codepoint. Capping 4096 RUNES
+  ## would admit up to 16 KiB of 4-byte codepoints.
+  result = text.truncateBytes(MaxReplyBytes)
   if payload{"stop_reason"}.getStr() == "max_tokens" and '{' notin result and
       JsonPrefill notin result:
     raise newException(LlmError, "reply cut off at max_tokens before any " &
