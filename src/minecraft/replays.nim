@@ -104,6 +104,10 @@ proc isControlRecord*(message: string): bool =
 proc applyControlRecord*(sim: var SimServer, message: string) =
   ## The ONE proc that applies a control record, on record and on playback
   ## alike. Anything it does not recognise is chrome, not physics.
+  ##
+  ## `start`, `turnend` and `stop` are physics; `directive` is the narration
+  ## the spectator reads. Both are applied here so a replay's bytes are
+  ## SELF-SUFFICIENT: nothing the viewer draws is recorded a second time.
   if not isControlRecord(message):
     return
   var node: JsonNode
@@ -126,6 +130,24 @@ proc applyControlRecord*(sim: var SimServer, message: string) =
       elif rule == EndRuleWallClock: ReasonDeadline
       else: ReasonComplete
     sim.finishEpisode(rule, reason)
+  of "directive":
+    ## The turn's plan and the cog's own `say`. This is CHROME, not physics -
+    ## none of it enters `gameHash` (`sim_state.gameHash` mixes the cog, the
+    ## inventory, the ladder and the world digest and nothing else), so
+    ## applying it on playback cannot move the hash chain. It is applied by
+    ## this proc on BOTH paths, which is what makes the say feed, the
+    ## `MISSED THE CALL` row and the plate's fallback glyph re-derivable from
+    ## the recorded bytes instead of being live-server-only.
+    sim.pushFeedDirective(message)
+    case node{"source"}.getStr()
+    of "llm":
+      if sim.llmTurns.len > 0:
+        inc sim.llmTurns[0]
+    of "fallback":
+      if sim.fallbackTurns.len > 0:
+        inc sim.fallbackTurns[0]
+    else:
+      discard
   else:
     discard
 

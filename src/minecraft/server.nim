@@ -621,16 +621,15 @@ proc runServerLoop*(host = "0.0.0.0", port = 8080,
         sim.macrosUnreachable += expanded.unreachable
         if plan.notes.len > 0:
           sim.lastPlan.notes = plan.notes
-        case plan.source
-        of dsLlm: inc sim.llmTurns[0]
-        of dsFallback: inc sim.fallbackTurns[0]
-        of dsScripted: discard
         let record = directiveRecord(turnIndex, sim.gameTicksElapsed(), 0,
           seatAlias(0), plan, primitiveNames(queue), sim.lastPlan.truncated,
           sim.lastPlan.dropped, sim.lastPlan.unreachable, prevBlocked, "",
           lastPlanView)
         replayWriter.writeChat(tickTime(sim.tickCount), 0, record)
-        sim.pushFeedDirective(record)
+        ## The SAME proc a playback uses: the feed line and the per-seat
+        ## llm/fallback counts are derived from the record that was just
+        ## written, never from state the replay does not carry.
+        sim.applyControlRecord(record)
         sim.emitEvent(Directive, what = $plan.source, amount = turnIndex,
           content = plan.say)
 

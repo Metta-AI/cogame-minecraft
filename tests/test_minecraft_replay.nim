@@ -12,6 +12,7 @@ import minecraft/driver
 import minecraft/baselines
 import minecraft/decide
 import minecraft/replays
+import minecraft/broadcast
 
 proc standardConfig(seed: int): GameConfig =
   result = defaultGameConfig()
@@ -26,9 +27,10 @@ type Recorded = object
   finalTick: int
   milestoneMask: int
   says: seq[string]
+  fallbackTurns: int
 
 proc record(config: GameConfig, path: string, forceStop = "",
-    stopAfter = 0, say = "", notes = ""): Recorded =
+    stopAfter = 0, say = "", notes = "", llmSeat = false): Recorded =
   ## Records one episode exactly as `server.nim` does, optionally forcing a
   ## wall-clock or fault stop after `stopAfter` ticks. The stop is written as a
   ## LOAD-BEARING record and applied by the same proc on record and playback.
@@ -37,6 +39,7 @@ proc record(config: GameConfig, path: string, forceStop = "",
   var writer = openReplayWriter(path, config.configJson())
   var engine = initDecisionEngine(sim)
   engine.seats[0].registered = true
+  engine.seats[0].isLlm = llmSeat
   engine.seats[0].baseline = blMiner
   engine.seats[0].label = "miner"
   sim.seatNames[0] = "daveey"
@@ -61,9 +64,10 @@ proc record(config: GameConfig, path: string, forceStop = "",
         plan.notes = sanitizeNote(notes)
         result.says.add(plan.say)
       queue = expandPlan(sim, plan).queue
-      writer.writeChat(tickTime(sim.tickCount), 0,
-        directiveRecord(turnIndex, sim.gameTicksElapsed(), 0, seatAlias(0),
-          plan, primitiveNames(queue), false, 0, 0, @[], "", nil))
+      let directive = directiveRecord(turnIndex, sim.gameTicksElapsed(), 0,
+        seatAlias(0), plan, primitiveNames(queue), false, 0, 0, @[], "", nil)
+      writer.writeChat(tickTime(sim.tickCount), 0, directive)
+      sim.applyControlRecord(directive)
       turnTicks = 0
     var primitive = pNoop
     if queue.len > 0:
@@ -92,6 +96,7 @@ proc record(config: GameConfig, path: string, forceStop = "",
   result.reason = sim.reasonText()
   result.finalTick = sim.gameTicksElapsed()
   result.milestoneMask = sim.ledger.milestoneScore()
+  result.fallbackTurns = sim.fallbackTurns[0]
 
 proc rederive(path: string): tuple[player: ReplayPlayer, sim: SimServer] =
   let data = parseReplayBytes(readFile(path))
@@ -193,6 +198,44 @@ block replayIsSelfSufficient:
   doAssert back.sim.ledger.milestonesReached() > 0
   removeDir(dir)
   echo "ok: the bytes alone carry the name, the config, the plans and the result"
+
+# 31b. `the narration re-derives from the bytes`
+block narrationRederivesFromTheBytes:
+  ## The static viewer draws the say feed, the `MISSED THE CALL` row and the
+  ## plate's `and` glyph from `state.directives` / `mc.fallbacks`. Both are
+  ## built from `sim.feedDirectives` / `sim.fallbackTurns`, which on PLAYBACK
+  ## can only come from the recorded `directive` records - there is no live
+  ## decision loop behind a replay.
+  let dir = getTempDir() / "mc-replay-31b"
+  removeDir(dir)
+  createDir(dir)
+  let path = dir / "narrated.replay"
+  # An LLM seat with no credentials: every turn is a recorded fallback, and
+  # every turn carries the cog's line.
+  let recorded = record(standardConfig(42), path,
+    say = "iron in the wall - furnace here, then straight east", llmSeat = true)
+  doAssert recorded.fallbackTurns > 0, "the live episode must have fallen back"
+  let back = rederive(path)
+  doAssert back.sim.feedDirectives.len > 0,
+    "playback derived no directive records at all: the say feed, the " &
+    "MISSED THE CALL row and the fallback glyph would all be empty"
+  doAssert back.sim.fallbackTurns[0] == recorded.fallbackTurns,
+    "playback re-derived " & $back.sim.fallbackTurns[0] &
+    " fallback turns, the recording counted " & $recorded.fallbackTurns
+  var sawSay = false
+  for entry in back.sim.feedDirectives:
+    if recorded.says[0] in entry:
+      sawSay = true
+  doAssert sawSay, "the cog's line is not in the re-derived feed"
+  # ...and it reaches the chrome frame the viewer actually reads.
+  let frame = parseJson(back.sim.buildStateJson(newJArray(), true, 1,
+    back.player.replayMaxTick(), true, true, -1))
+  doAssert frame.hasKey("directives"), "the frame carries no directives"
+  doAssert frame["directives"][0]{"say"}.getStr == recorded.says[0]
+  doAssert frame["mc"]["fallbacks"].getInt == recorded.fallbackTurns,
+    "the plate's fallback glyph never lights on playback"
+  removeDir(dir)
+  echo "ok: playback re-derives the say feed and the fallback count from bytes"
 
 # 32. `the incremental world digest equals a full fold`
 block digestEqualsFold:

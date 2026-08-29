@@ -77,14 +77,14 @@ proc runEpisode(config: GameConfig, dir: string,
       sim.actionsDropped += plan.dropped
       sim.repliesRepaired += plan.dropped
       sim.macrosUnreachable += expanded.unreachable
-      case plan.source
-      of dsLlm: inc sim.llmTurns[0]
-      of dsFallback: inc sim.fallbackTurns[0]
-      of dsScripted: discard
-      writer.writeChat(tickTime(sim.tickCount), 0,
-        directiveRecord(turnIndex, sim.gameTicksElapsed(), 0, seatAlias(0),
-          plan, primitiveNames(queue), sim.lastPlan.truncated,
-          sim.lastPlan.dropped, sim.lastPlan.unreachable, @[], "", view))
+      let directive = directiveRecord(turnIndex, sim.gameTicksElapsed(), 0,
+        seatAlias(0), plan, primitiveNames(queue), sim.lastPlan.truncated,
+        sim.lastPlan.dropped, sim.lastPlan.unreachable, @[], "", view)
+      writer.writeChat(tickTime(sim.tickCount), 0, directive)
+      ## Exactly what server.nim does: the feed line and the per-seat
+      ## llm/fallback counts come from the record, through the one proc a
+      ## playback also uses.
+      sim.applyControlRecord(directive)
       turnTicks = 0
       fresh = false
     var primitive = pNoop
