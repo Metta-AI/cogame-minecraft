@@ -205,9 +205,15 @@ proc turn*(engine: var DecisionEngine, sim: SimServer, turnIndex: int,
           cause = "throttled"
         result.add(fallbackRecord(turnIndex, attempt + 1, cause, error.msg))
         ## Attempt 1 says "will retry"; only a genuine SECOND failure logs
-        ## "falling back" (the phrase phase 60 greps the game log for).
-        echo "minecraft llm: seat ", seat, " attempt ", attempt + 1,
-          " failed, will retry: ", error.msg
+        ## "falling back" (the phrase phase 60 greps the game log for), which
+        ## the loop below does. Saying "will retry" after the LAST attempt
+        ## would describe a retry that never happens.
+        if attempt + 1 < 2:
+          echo "minecraft llm: seat ", seat, " attempt ", attempt + 1,
+            " failed, will retry: ", error.msg
+        else:
+          echo "minecraft llm: seat ", seat, " attempt ", attempt + 1,
+            " failed: ", error.msg
         stillOpen.add(seat)
     open = stillOpen
     inc attempt
