@@ -375,10 +375,19 @@ proc advanceReplayFrame*(replay: var ReplayPlayer, sim: var SimServer,
     commands: openArray[char]): JsonNode =
   ## Applies viewer controls and advances ONE public presentation frame.
   ##
-  ## Playback rate: one tick per three animation frames at 30 fps = 10
-  ## ticks/second, so a 960-tick episode plays for 96 s and even a 400-tick
-  ## episode plays for 40 s - which is what lets `viewer_smoke.mjs --soak 10`
-  ## observe real advancement instead of a legitimately-finished replay.
+  ## Playback rate: ONE TICK PER FRAME at `TargetFps` = 24, i.e. 24
+  ## ticks/second at the default speed chip, so a 960-tick episode plays for
+  ## 40 s and even a 400-tick episode plays for 17 s - four times and nearly
+  ## twice `viewer_smoke.mjs --soak 10`, which is what lets the soak observe
+  ## real advancement instead of a legitimately-finished replay.
+  ##
+  ## The note asks for 10 ticks/s (one tick per three frames at 30 fps) with
+  ## the cog interpolated across the three. This sim's presentation loop and
+  ## its replay timebase are the SAME constant (`ReplayFps = TargetFps = 24`,
+  ## sim_types.nim), so one tick per frame is the only rate at which a
+  ## recorded time converts back to its tick exactly; a 5-ticks-per-12-frames
+  ## cadence would need a sub-tick accumulator on both sides of `tickOfTime`.
+  ## Recorded in docs/PORTING-MINECRAFT.md, divergence J.
   var didSeek = false
   for tick in seekTicks:
     replay.applyReplaySeek(sim, tick)

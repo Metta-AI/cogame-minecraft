@@ -144,7 +144,7 @@ block viewpanelKept:
   # form `core.setZoom(32 / cameraCells)` was: a bare `core.setZoom(` matches
   # ANY zoom call, so it guards nothing. The mechanism is a convergence loop
   # rather than the closed form because the closed form is only right when the
-  # board fits on its width (docs/PORTING-MINECRAFT.md, divergence J).
+  # board fits on its width (docs/PORTING-MINECRAFT.md, divergence I).
   doAssert "var cellsNow = t.visW > 0 ? t.visW / 24 : CAMERA_CELLS;" in block1,
     "the follow-cam reads the cell span back from the transform the core REPORTS"
   doAssert "if (followArmed && Math.abs(cellsNow - CAMERA_CELLS) > 0.5) {" in

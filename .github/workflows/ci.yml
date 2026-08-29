@@ -352,8 +352,8 @@ jobs:
           # the board is pannable, where drawing off-frame is normal -- the
           # count is still reported on stdout and in viewer-smoke.json.
           # --soak 10 watches the clock/tick readouts ADVANCE for ten seconds,
-          # which a 960-tick episode at 10 ticks/second comfortably outlasts
-          # (96 s of playback). --strict-text-bounds stays ON even though this
+          # which a 960-tick episode at 24 ticks/second (one tick per frame at
+          # TargetFps) comfortably outlasts: 40 s of playback. --strict-text-bounds stays ON even though this
           # board is pannable, because no string is ever drawn onto the board
           # layer here: every string this viewer draws is DOM chrome or lives
           # in a fixed-size gutter panel, so a text run outside its canvas is

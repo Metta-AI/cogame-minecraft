@@ -265,7 +265,32 @@ thread away, so its own answer is the only honest one.
 `tests/test_minecraft_viewer.nim` pins all three lines as exact strings, so this
 mechanism cannot be loosened without the test noticing.
 
-## J. Four cog facings from one render
+## J. Playback runs at 24 ticks/second, not the note's 10
+
+The note specifies "one tick per three animation frames at 30 fps = 10
+ticks/second", with the cog interpolated across the three frames, and speed
+chips `[0.5, 1, 2, 4, 8]`. The shipped rate is **one tick per frame at
+`TargetFps` = 24**, with chips `[1, 2, 3, 4, 8, 16]` (`PlaybackSpeeds`), and
+no sub-tick interpolation.
+
+Two reasons, both structural rather than aesthetic:
+
+1. `ReplayFps` **is** `TargetFps` (`sim_types.nim`), so a recorded time and a
+   tick are the same clock. `tickTime` / `tickOfTime` round-trip exactly at one
+   tick per frame; any other cadence needs a fractional accumulator on the
+   playback side and leaves the scrubber's tick axis and the recorded chat
+   times disagreeing by up to half a tick.
+2. The chips are integer step counts per frame (`replaySpeed()` multiplies
+   `stepReplay` calls), so a `0.5` chip is not a slower step but a skipped
+   frame, which is the same accumulator again.
+
+The consequence the checklist cares about is the soak: a 960-tick episode
+plays for **40 s** and the shortest episode CI can produce is well over
+`viewer_smoke.mjs --soak 10`, so the soak still watches a genuinely advancing
+replay. `ci.yml`'s comment on the soak step carries the 24 as well, so the two
+cannot drift apart again.
+
+## K. Four cog facings from one render
 
 `tools/art/source/cog_sheet.png` is one nano-banana render of four Softmax
 cogs in a miner's kit (head-lamp, pickaxe). The model drew them near
