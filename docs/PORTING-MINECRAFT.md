@@ -328,3 +328,30 @@ That is deliberate, and it is the stronger reading of the checklist's
 The note's eight names describe the same eight readouts; only the layer they
 are drawn on differs, and the layer that shipped is the one that leaves
 `broadcast_core.js` inherited.
+
+## M. A no-show seat is declared and the run plays out; the note also says "refuses to start"
+
+The note's named edit 2 asks the server to "log loudly and refuse to start the
+game when the joined seat has no register record (the grf-football 2026-08-27
+silent-default scar)", and its test 27 asks the same scenario to "produce a
+finished episode inside the wall-clock budget", with `fallbackTurns` counted
+and `deadSeats` set. Those two are not jointly satisfiable: an episode that
+never starts never finishes and never scores.
+
+`src/minecraft/server.nim:575-595` implements the second, with the first one's
+guarantee kept intact — the thing the scar is actually about is a **silent**
+default:
+
+- `ERROR: seat 0 <why> within <n> lobby ticks; the run plays the published
+  miner baseline and the failure is declared` on stdout,
+- `declarePlayerFailure(0, …)` — the closed two-key
+  `{message, failed_policy_index}` payload the platform reads,
+- `sim.deadSeats[0] = true`, so the seat is marked dead in `results`,
+- and only then a `start` record, with the seat playing the **published**
+  `miner` baseline rather than a hidden internal default.
+
+Nothing about the outcome is silent or invented: the platform is told the seat
+failed, the replay says which baseline played, and the run scores. A refusal
+would instead produce no replay, no results document and nothing for the
+league to read, on the one failure mode a single-seat game is most likely to
+hit.
