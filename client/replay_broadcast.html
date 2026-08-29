@@ -2161,22 +2161,17 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
       plate.className = 'plate ' + team + ' ' + (i % 2 === 0 ? 'side-l' : 'side-r');
       plate.setAttribute('data-team', team);
       if (MC_MODE) {
-        // PAINTBALL: the plate's CONTENTS change (hill time held, live hill
-        // coverage, tag-outs) — the plate, the sides, the squad strip and the
-        // clock column are the classic ones. The heart/flag icon is gone with
-        // the objective it belonged to.
+        // MINECRAFT: the plate's CONTENTS are the run's - the seat's REAL
+        // policy name, its rung count and the depth chip. The plate, the
+        // sides and the clock column are the inherited ones.
         plate.innerHTML =
-          '<div class="hillchip" id="hill-' + team + '" title="Hill coverage">—</div>' +
+          '<div class="mc-rungs" id="rungs-' + team + '" title="Rungs climbed">—</div>' +
           '<div class="team-id">' +
           '<div class="lives-line">' +
           '<span class="team-name plate-name" id="name-' + team + '">' + team.toUpperCase() + '</span>' +
           '<span class="hcap" id="hcap-' + team + '" style="display:none"></span>' +
-          '<span class="lives-label pb-lbl">Hill</span>' +
+          '<span class="depth-label pb-lbl">Pickaxe</span>' +
           '<span class="lives-num" id="lives-' + team + '">—</span>' +
-          '</div>' +
-          '<div class="pb-sub">' +
-          '<span class="pb-tags pb-lbl" id="tags-' + team + '"></span>' +
-          '<span class="squad" id="squad-' + team + '"></span>' +
           '</div>' +
           '</div>';
         sides[i % 2].appendChild(plate);
@@ -2211,34 +2206,23 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
       setName('name-' + team, teamName(s, team, team.toUpperCase()));
       setHandicap('hcap-' + team, s, team);
       if (MC_MODE) {
-        var t = tr[team] || {};
-        // PAINTBALL: the big numeral is HILL TIME HELD (M:SS), the chip is
-        // live hill coverage, and the sub-line counts tag-outs. '—' until the
-        // frame actually carries this team's entry.
-        $('lives-' + team).textContent = tr[team] ? fmt(t.held || 0) : '—';
-        var chip = $('hill-' + team);
+        var mc = s.mc || {};
+        // MINECRAFT: the big numeral is the best PICKAXE the cog holds, and
+        // the chip is the rung count. '—' until a frame carries the run.
+        $('lives-' + team).textContent = s.mc
+          ? ['none', 'wood', 'stone', 'iron'][mc.tier || 0] : '—';
+        var chip = $('rungs-' + team);
         if (chip) {
-          chip.textContent = tr[team] ? (t.cov || 0) + '%' : '—';
-          chip.classList.toggle('own', !!t.own);
-          chip.style.color = teamCol(team) || PAPER;
+          chip.textContent = s.mc ? (mc.n || 0) + '/' + (mc.of || 11) : '—';
+          chip.classList.toggle('own', (mc.n || 0) >= 6);
+          chip.style.color = AMBER;
         }
-        var tagsEl = $('tags-' + team);
-        if (tagsEl) {
-          tagsEl.textContent = tr[team]
-            ? (t.tags || 0) + ' tags · ' + (t.cogs || 0) + ' up' : '';
-        }
-        renderSquad($('squad-' + team), s, team, s.pov);
-        // leader pulse when this team leads every rival on banked hill time
-        var bestPbRival = -Infinity;
-        teams.forEach(function (o) {
-          if (o !== team) bestPbRival = Math.max(bestPbRival, (tr[o] && tr[o].held) || 0);
-        });
-        var pbPlate = document.querySelector('.plate[data-team="' + team + '"]');
-        if (pbPlate) {
-          pbPlate.classList.toggle(
-            'leader',
-            (t.held || 0) - bestPbRival >= 5 && s.ph === 'playing'
-          );
+        // The plate pulses while the run is climbing: at or past par, with
+        // the clock still going.
+        var mcPlate = document.querySelector('.plate[data-team="' + team + '"]');
+        if (mcPlate) {
+          mcPlate.classList.toggle(
+            'leader', (mc.n || 0) >= 6 && s.ph === 'playing');
         }
         return;
       }
@@ -4348,6 +4332,23 @@ button.beat-marker {
   height: calc(15 * var(--u));
 }
 
+/* --- the cog's own window, in the RIGHT gutter under the minimap --------- */
+/* The starter pins #fpv bottom-left over the board; here the left gutter is
+   the strata gauge and the ladder, so the inset moves to the right gutter
+   beneath the kept #viewpanel. Still draggable and resizable by the starter's
+   own #fpv-grip. */
+#fpv {
+  left: auto;
+  right: calc(12 * var(--u));
+  top: calc(var(--topband, 0px) + 150 * var(--u));
+  bottom: auto;
+  width: calc(150 * var(--u));
+  min-width: calc(96 * var(--u));
+  max-width: calc(220 * var(--u));
+  aspect-ratio: 1 / 1;
+  opacity: 0.95;
+}
+
 /* --- feed rows ---------------------------------------------------------- */
 .feed-row .mc-rung { color: var(--amber); letter-spacing: 0.08em; }
 .feed-row .mc-say { color: var(--paper); font-style: italic; }
@@ -4648,18 +4649,23 @@ button.beat-marker {
   function applyCamera(mc, core) {
     if (!core || !mc) return;
     var t = core.getTransform ? core.getTransform() : null;
-    if (followArmed && t && (!zoomApplied || t.zoom === 1)) {
-      // fitScale = W/768 and showing k cells needs scale = W/(24k), so
-      // zoom = 768/(24k) = 32/k independently of the container width.
-      core.setZoom(32 / CAMERA_CELLS);
+    if (!t) return;
+    // CONVERGE on CAMERA_CELLS cells across, read back from the transform the
+    // core actually reports (visW is the map span on screen), rather than
+    // assuming which axis the letterbox fits. A closed-form 32/cells is only
+    // right when the board fits on its width, and the static bundle's core
+    // lives a thread away, so its answer is the only honest one.
+    var cellsNow = t.visW > 0 ? t.visW / 24 : CAMERA_CELLS;
+    if (followArmed && Math.abs(cellsNow - CAMERA_CELLS) > 0.5) {
+      core.setZoom((t.zoom || 1) * (cellsNow / CAMERA_CELLS));
       zoomApplied = true;
     }
     if (followArmed && core.panTo) {
       core.panTo(mc.x * 24 + 12, mc.y * 24 + 12);
     }
     var read = $('zoom-read');
-    if (read && t) {
-      var cells = Math.max(1, Math.min(32, Math.round(32 / (t.zoom || 1))));
+    if (read) {
+      var cells = Math.max(1, Math.min(mc.size || 32, Math.round(cellsNow)));
       var text = cells + ' CELLS';
       if (read.textContent !== text) read.textContent = text;
     }

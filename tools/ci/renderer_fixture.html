@@ -179,10 +179,25 @@
   function start() {
     var win = frame.contentWindow;
     var tries = 0;
+    // WAIT FOR A REAL FRAME FIRST. The game block only receives the page's
+    // chrome context on its first frame (the page's own IIFE runs BEFORE the
+    // appended block defines window.MinecraftChrome, so install() never
+    // fires), so driving it any earlier reads `esc` off undefined. The
+    // bundle's own data-replay-loaded="true" is exactly the "a frame is on
+    // the canvas" signal to wait on.
     (function poll() {
       tries++;
       try {
-        if (win.MinecraftChrome) {
+        var doc = frame.contentDocument;
+        var ready = doc &&
+          doc.documentElement.getAttribute('data-replay-loaded') === 'true';
+        var failed = doc &&
+          doc.documentElement.getAttribute('data-replay-error');
+        if (failed) {
+          fail('the viewer bundle failed to load: ' + failed);
+          return;
+        }
+        if (ready && win.MinecraftChrome) {
           drive(win);
           document.documentElement.setAttribute('data-fixture', 'ok');
           say('OK ' + (WIDTHS.length * SCENARIOS.length) + ' frames drawn');
@@ -192,8 +207,8 @@
         fail(error && error.message ? error.message : String(error));
         return;
       }
-      if (tries > 200) {
-        fail('the viewer bundle never published MinecraftChrome');
+      if (tries > 400) {
+        fail('the viewer bundle never drew a frame (data-replay-loaded)');
         return;
       }
       setTimeout(poll, 100);

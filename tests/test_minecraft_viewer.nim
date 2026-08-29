@@ -139,10 +139,14 @@ block viewpanelKept:
     doAssert "id=\"" & id & "\"" in prefix,
       "#" & id & " must be KEPT: the board is much larger than the frame"
   doAssert "core.attachMinimap($('minimap-canvas'))" in prefix
-  doAssert "core.setZoom(32 / CAMERA_CELLS)" in block1
   doAssert "CAMERA_CELLS = 15" in block1
+  doAssert "core.setZoom(" in block1, "the follow-cam sets the zoom"
+  doAssert "t.visW / 24" in block1,
+    "the follow-cam converges on the transform the core REPORTS"
   doAssert "core.panTo(" in block1, "the follow-cam pans every frame"
   doAssert "followArmed" in block1
+  # the inset lives in the RIGHT gutter, under the kept minimap
+  doAssert "#fpv {" in block1, "the game block re-anchors the inset"
   # ...and the removed ids appear NOWHERE
   for gone in ["povBadge", "fpv-hp", "fpv-gear", "fpv-map", "fpv-map-canvas"]:
     doAssert ("id=\"" & gone & "\"") notin page,

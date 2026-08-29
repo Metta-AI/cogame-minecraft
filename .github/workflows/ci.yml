@@ -384,7 +384,7 @@ jobs:
           node tools/ci/fixture_smoke.mjs \
             --bundle dist/static-replay-viewer \
             --replay "${replay}" \
-            --timeout 60
+            --timeout 90
 
       - name: Run the emitted wasm module headlessly against the fixtures
         # wasm32-only failures (integer traps, address-space exhaustion) are
