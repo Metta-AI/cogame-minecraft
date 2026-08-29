@@ -870,24 +870,11 @@ html, body {
   transform: translateX(-1px);
   z-index: 2;
 }
-/* kill ticks are short and colored by the KILLER's team (a red tick = red
-   scored a kill); team-kills and unattributable pileups stay neutral. */
-.beat-marker.kill { background: var(--tc, var(--paper-dim)); height: calc(6 * var(--u)); }
-/* flag beats are colored by the FLAG's team, matching the banners ("RED
-   HEART TAKEN"): steal = full tick with a flag head, return = same tick
-   dimmed (the heart snapped home), capture = the chunky match point in the
-   CAPTURING team's color. */
-.beat-marker.steal { background: var(--tc, var(--amber)); }
-.beat-marker.steal::after {
-  content: '';
-  position: absolute;
-  left: 0; top: 0;
-  width: calc(5 * var(--u));
-  height: calc(3 * var(--u));
-  background: inherit;
-}
-.beat-marker.return { background: var(--tc, var(--paper-dim)); opacity: 0.45; }
-.beat-marker.capture { background: var(--tc, var(--amber)); width: calc(3 * var(--u)); height: calc(12 * var(--u)); }
+/* The per-kind beat rules live in the appended MINECRAFT block: this game
+   emits milestone / newdepth / death / fallback / end and none of paintbot's
+   eight kinds, so ctf's .kill / .steal / .return / .capture rules are removed
+   here with .gamestart / .hillflip / .tagout / .gameover, as the design note
+   requires. The shared .beat-marker geometry above is kept. */
 /* winner cap: a flat block just past the track's right end, colored by the
    verdict (split for a draw), so the scrubber itself says how this ends. */
 .scrub-win {

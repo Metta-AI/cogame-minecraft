@@ -126,10 +126,32 @@ block beatCss:
   kinds.sort()
   doAssert kinds == @["death", "end", "fallback", "milestone", "newdepth"],
     "the beat CSS kinds are " & $kinds
+  # The whole PAGE, not just the appended block: four of ctf's eight rules
+  # lived in the inherited prefix, which a block-only scan cannot see, and the
+  # note asks for all eight to be gone.
   for gone in ["kill", "steal", "return", "capture", "gamestart", "hillflip",
       "tagout", "gameover"]:
-    doAssert (".beat-marker." & gone) notin block1,
+    doAssert (".beat-marker." & gone) notin page,
       "the starter's " & gone & " beat CSS survived"
+  # ...and the kinds the page DOES style are exactly the five it emits,
+  # measured over the whole page for the same reason.
+  var pageKinds: seq[string] = @[]
+  var scan = 0
+  while true:
+    scan = page.find(".beat-marker.", scan)
+    if scan < 0:
+      break
+    scan += ".beat-marker.".len
+    var name = ""
+    while scan < page.len and page[scan] in {'a'..'z', '0'..'9'}:
+      name.add(page[scan])
+      inc scan
+    if name.len > 0:
+      pageKinds.add(name)
+  pageKinds = pageKinds.deduplicate()
+  pageKinds.sort()
+  doAssert pageKinds == @["death", "end", "fallback", "milestone", "newdepth"],
+    "the page's beat CSS kinds are " & $pageKinds
   echo "ok: the beat CSS is exactly the five kinds the sim emits"
 
 # 42. `viewpanel is kept and wired`
