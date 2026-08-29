@@ -113,17 +113,24 @@ block recordThenRederive:
   let dir = getTempDir() / "mc-replay-30"
   removeDir(dir)
   createDir(dir)
-  # diamond
-  var diamondConfig = standardConfig(8)
-  # death: a scripted seat walks into lava only if we put lava under its feet,
-  # so the death case is recorded from a hand-driven episode below instead.
-  for (name, config, stop, after) in [
-      ("turnCap", standardConfig(42), "", 0),
-      ("diamond", diamondConfig, "", 0),
-      ("wallClock", standardConfig(42), EndRuleWallClock, 200),
-      ("fault", standardConfig(42), EndRuleFault, 150)]:
+  # Every rule is named with the rule the recording MUST produce: the case
+  # labelled "diamond" once used a seed that ended on the turn cap, so the
+  # diamond path was never actually round-tripped. `death` is a real seed the
+  # miner walks into lava on, not a hand-placed lava cell - a replay
+  # re-generates its world from the config, so only the generator's own lava
+  # can be re-derived.
+  for (name, config, stop, after, expect) in [
+      ("turnCap", standardConfig(42), "", 0, EndRuleTurnCap),
+      ("diamond", standardConfig(18), "", 0, EndRuleDiamond),
+      ("death", standardConfig(4), "", 0, EndRuleDeath),
+      ("wallClock", standardConfig(42), EndRuleWallClock, 200,
+        EndRuleWallClock),
+      ("fault", standardConfig(42), EndRuleFault, 150, EndRuleFault)]:
     let path = dir / (name & ".replay")
     let recorded = record(config, path, stop, after)
+    doAssert recorded.endRule == expect,
+      name & ": the recording ended on " & recorded.endRule &
+      ", so that end rule is not the one being round-tripped"
     let back = rederive(path)
     doAssert back.sim.gameTicksElapsed() == recorded.finalTick,
       name & ": re-derived " & $back.sim.gameTicksElapsed() & " ticks, " &
@@ -135,7 +142,10 @@ block recordThenRederive:
     doAssert back.player.hashMismatchTick == -1,
       name & ": hash chain diverged at tick " & $back.player.hashMismatchTick
     doAssert not back.player.hashValidationFailed
-  # tickCap and death, driven by hand so the rule is reached deterministically
+  # tickCap, plus the death rule reached by hand, so both are covered in-sim
+  # as well as through the bytes above. tickCap is the one rule that cannot be
+  # round-tripped: it needs an episode whose turns never end (F10), which no
+  # recording produces.
   block deathAndTickCap:
     var sim = initSimServer(standardConfig(3))
     sim.startGame()
