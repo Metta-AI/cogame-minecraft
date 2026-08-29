@@ -42,10 +42,10 @@ const DefaultBaselineParams* = BaselineParams(
   ## The SWEPT pick, not a guess: `tools/tune_baselines.nim` evaluated 216
   ## candidates over 40 standard + 40 deepcut seeds and this one scored
   ## highest. `tools/ci/baseline_tuning.json` records it and
-  ## `tests/test_minecraft_tuning.nim` asserts the two still agree.
-  woodPlanks: 16,
-  woodSticks: 4,
-  stoneCobble: 16,
+  ## `tests/test_minecraft_driver.nim` asserts the two still agree.
+  woodPlanks: 8,
+  woodSticks: 6,
+  stoneCobble: 12,
   stoneCoal: 3,
   sweepLength: 9,
   sweepTurns: 3,

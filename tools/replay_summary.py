@@ -80,31 +80,42 @@ MILESTONE_IDS = [
 ]
 
 
+MAGIC = b"COWLDMCR"
+
+
+def read_header(data: bytes) -> tuple[str, str, int]:
+    """Decode the fixed header and return (gameName, gameVersion, offset).
+
+    The header is `magic + u16 formatVersion + string gameName +
+    string gameVersion + u64 timestamp`, where a string is a little-endian
+    u16 length followed by its bytes. Reading it EXACTLY matters: the earlier
+    version scanned the first ASCII digit run after the game name, which
+    silently ran into the timestamp whenever its first byte happened to be an
+    ASCII digit - a one-in-ten flake that reported a version like "17".
+    """
+    if not data.startswith(MAGIC):
+        raise ValueError("not a %s replay" % MAGIC.decode())
+    offset = len(MAGIC) + 2
+
+    def read_string(off: int) -> tuple[str, int]:
+        length = data[off] | (data[off + 1] << 8)
+        off += 2
+        return data[off:off + length].decode("utf-8"), off + length
+
+    game_name, offset = read_string(offset)
+    game_version, offset = read_string(offset)
+    offset += 8                                    # the u64 timestamp
+    return game_name, game_version, offset
+
+
 def summarise(path: str) -> dict:
     data = open(path, "rb").read()
-    header = data[:64]
     protocol = "minecraft/v1"
-    game_version = ""
-    # The header is `magic + format version + gameName + gameVersion` before
-    # the config; recover the version as the ASCII digit run right after the
-    # game name.
-    try:
-        head_text = header.decode("latin-1")
-        if "COWLDMCR" in head_text:
-            head_text = head_text.split("COWLDMCR", 1)[1]
-        if "minecraft" in head_text:
-            tail = head_text.split("minecraft", 1)[1]
-            digits = ""
-            for ch in tail:
-                if ch.isdigit():
-                    digits += ch
-                elif digits:
-                    break
-            game_version = digits
-    except Exception:                                   # noqa: BLE001
-        pass
+    game_name, game_version, header_end = read_header(data)
+    if game_name != "minecraft":
+        raise ValueError("replay is for %r, not minecraft" % game_name)
 
-    first = data.find(b"{")
+    first = data.find(b"{", header_end)
     config: dict = {}
     cursor = 0
     if first >= 0:

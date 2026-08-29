@@ -334,11 +334,21 @@ proc truncateRunes*(text: string, limit: int): string =
     return text
   text.runeSubStr(0, limit)
 
-proc mix64*(a, b, c, d: int): int =
+const Mix64Mask* = 0x3FFF_FFFF
+  ## 30 bits. `mix64` is read as an `int`, and the sim compiles BOTH natively
+  ## (64-bit int) and to wasm32 (32-BIT int). Masking to 63 bits produced a
+  ## value that fits a native int and traps `value out of range` on the very
+  ## first world generation in the browser - with the whole bundle loaded,
+  ## every asset 200, and the viewer stuck on the loading curtain
+  ## (run 33241005565). Thirty bits is unambiguously positive in an int32 and
+  ## is what makes the native and wasm worlds bit-identical by construction.
+
+proc mix64u*(a, b, c, d: int): uint64 =
   ## splitmix64 over the four mixed words. A pure HASH, not a stream: nothing
   ## the policy does can shift a draw, reorder draws, or consume one out from
   ## under a later tick, so the world of seed `s` is the same world however
-  ## the cog plays it.
+  ## the cog plays it. `uint64` is 64 bits on every target Nim supports,
+  ## including wasm32, so the mixing itself is portable.
   var x = uint64(a) * 0x9E3779B97F4A7C15'u64
   x = x xor (uint64(b) * 0xBF58476D1CE4E5B9'u64)
   x = x xor (uint64(c) * 0x94D049BB133111EB'u64)
@@ -348,7 +358,12 @@ proc mix64*(a, b, c, d: int): int =
   x = x xor (x shr 27)
   x = x * 0x94D049BB133111EB'u64
   x = x xor (x shr 31)
-  int(x and 0x7FFF_FFFF_FFFF_FFFF'u64)
+  x
+
+proc mix64*(a, b, c, d: int): int =
+  ## The generator's draw: `mix64u` narrowed to 30 bits so it fits an `int` on
+  ## a 32-bit target. EVERY generated quantity in this game is a read of this.
+  int(mix64u(a, b, c, d) and uint64(Mix64Mask))
 
 proc mixHash*(state: uint64, value: int): uint64 =
   ## One step of the rolling game hash.

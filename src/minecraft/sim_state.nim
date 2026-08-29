@@ -114,8 +114,8 @@ proc cellDigest(x, y, z: int, value: Block, shaft: bool): uint64 {.inline.} =
   ## always bit-identical to a fresh fold over all 4096 cells (asserted by
   ## tests/test_minecraft_replay.nim). A non-invertible rolling mix would be
   ## cheaper to write and impossible to check.
-  uint64(mix64(z * 8191 + 7, x * 131 + 3, y * 17 + 5,
-    ord(value) * 2 + (if shaft: 1 else: 0)))
+  mix64u(z * 8191 + 7, x * 131 + 3, y * 17 + 5,
+    ord(value) * 2 + (if shaft: 1 else: 0))
 
 proc foldWorldHash(sim: var SimServer) =
   ## Seeds the digest by folding all four grids and the shaft planes once, at

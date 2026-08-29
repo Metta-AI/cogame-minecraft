@@ -22,7 +22,7 @@ block theClosedEnum:
   # Play three episodes and collect every kind that actually fired, then the
   # union must be a SUBSET of the closed enum with nothing outside it.
   var seen: seq[string] = @[]
-  for seed in [3, 8, 42]:
+  for seed in [4, 8, 19]:
     var config = defaultGameConfig()
     config.seed = seed
     var sim = initSimServer(config)
@@ -55,6 +55,14 @@ block theClosedEnum:
       if sim.interruptRequested:
         queue.setLen(0)
         turnTicks = config.turnTicks
+    # The turn cap ends the episode at a TURN boundary, before the next tick,
+    # so the `end` transition is only visible to a diff taken after the loop.
+    let tail = newJArray()
+    sim.stepEvents(tracker, tail)
+    for event in tail:
+      let kind = event["k"].getStr()
+      if kind notin seen:
+        seen.add(kind)
   for kind in seen:
     doAssert kind in expected, "stepEvents emitted an undeclared kind: " & kind
   doAssert "milestone" in seen and "descend" in seen and "end" in seen

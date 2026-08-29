@@ -236,7 +236,7 @@ block certSeedIsInteresting:
   doAssert episode.blockedEvents >= 1
   # NOTE: the design note also asks for at least one `lava` event on the cert
   # seed. Under the generator the note specifies (rule 2: `C < 120` AND a
-  # per-cell draw below `lavaChance`) a deep level carries 0.04 (z=2) to 0.44
+  # per-cell draw below `lavaChance`) a deep level carries 0.06 (z=2) to 0.34
   # (z=3) lava cells on average, so no scripted episode reliably sees one.
   # The generator is implemented exactly as specified; the lava paths are
   # covered by tests/test_minecraft_sim.nim (dig_down case 3 and `lava kills`)

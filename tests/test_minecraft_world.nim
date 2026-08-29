@@ -174,6 +174,33 @@ block noiseIsInteger:
           doAssert got >= 0 and got <= 1023
   echo "ok: the noise fields are integer and match a second implementation"
 
+# 4b. `every integer the sim computes fits a 32-BIT int`
+block wasm32Safety:
+  ## The sim compiles twice: natively (64-bit `int`) and to wasm32, where
+  ## `int` is THIRTY-TWO bits and a conversion that overflows raises `value
+  ## out of range` at run time. That failure is invisible to a native test
+  ## suite and kills the hosted viewer on its first frame with every asset
+  ## 200 (run 33241005565). These are the quantities a policy or a seed can
+  ## push.
+  const Int32Max = 2_147_483_647
+  for seed in [1, 42, 0xA6019, 2_147_483_646]:
+    for salt in 0 .. 20:
+      for x in 0 ..< 40:
+        for y in 0 ..< 40:
+          let draw = mix64(seed, salt, x, y)
+          doAssert draw >= 0, "mix64 must be non-negative"
+          doAssert draw <= Mix64Mask, "mix64 must fit 30 bits, got " & $draw
+          doAssert draw <= Int32Max
+          let field = noiseField(seed, salt, x, y)
+          doAssert field >= 0 and field <= 1023
+  # the interpolation's widest intermediate: 1023 * 65536
+  doAssert 1023 * 65536 <= Int32Max
+  # the widest score the game can produce
+  doAssert 1000 * 2047 + 959 <= Int32Max
+  # every cell index of the biggest legal world
+  doAssert 8 * 64 * 64 <= Int32Max
+  echo "ok: every generated integer fits a 32-bit int (wasm32 is int32)"
+
 # 5. `glyph, walkable, tier and drop tables are total`
 block tablesAreTotal:
   var glyphs = initHashSet[char]()
