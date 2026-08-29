@@ -4,7 +4,7 @@
 ## client files: the chrome is INHERITED, and a rewrite that reuses the
 ## starter's ids is a defect, not an improvement.
 
-import std/[algorithm, os, sequtils, strutils]
+import std/[algorithm, os, sequtils, sha1, strutils]
 
 
 const
@@ -45,6 +45,25 @@ block starterPlusBlock:
   doAssert prefix.len > 200_000,
     "the inherited prefix is the whole starter page, not a stub"
   doAssert block1.len < prefix.len, "the game block only APPENDS"
+  # The prefix is FROZEN. It is not byte-identical to coworld-ctf's page -
+  # the note's own removal list (the FPV HUD and map CSS and JS, #povBadge,
+  # the four-team art loops, the spectator relabels, the PB_ -> MC_ rename)
+  # all live above the banner - and the starter is not in this repo or in CI,
+  # so a diff against it cannot be a test here. What CAN be tested, and is,
+  # is that nothing edits the inherited prefix again without saying so: a
+  # length and a digest, the same discipline as chrome_common.js's sha256.
+  doAssert prefix.len == 211_999,
+    "the inherited prefix is " & $prefix.len & " bytes, not 211999: the " &
+    "starter's chrome above the banner was edited. If the edit is one the " &
+    "design note lists, re-pin this length and the digest below in the SAME " &
+    "commit and say which removal it is."
+  doAssert $secureHash(prefix) ==
+      "E8FA323DFCFB5E81D8672862004B7E4BBF7E9915",
+    "the inherited prefix's digest changed: " & $secureHash(prefix)
+  # the note's enumerated JS removals are gone, by name (the ids they fed are
+  # asserted absent in test 42)
+  for gone in ["renderFpvHud", "renderFpvMap", "fpvMap(", "$('povBadge')"]:
+    doAssert gone notin page, "the removed " & gone & " survived"
   # the starter's structure survives
   for id in ["viewport", "stage", "board", "lightpool", "grain", "lockerroom",
       "lk-bg", "lk-art", "lk-sprites", "lk-cap", "chrome", "scorebug",
