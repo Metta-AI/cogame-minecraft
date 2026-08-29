@@ -11,6 +11,14 @@ import std/[json]
 
 import sim_types, sim_config, world, agent, milestones, sim_state
 
+proc playerFailurePayload*(slot: int, message: string): JsonNode =
+  ## The platform's CLOSED player-failure payload: exactly
+  ## `{"failed_policy_index", "message"}` and nothing else. It lives here,
+  ## beside the results document, rather than inline in the server, so a test
+  ## can assert THIS proc's output instead of asserting a literal it built
+  ## itself - which is a test of nothing.
+  %*{"failed_policy_index": slot, "message": message}
+
 proc canAddPlayer*(sim: SimServer): bool =
   sim.players.len < sim.config.seatCountOf()
 

@@ -260,9 +260,16 @@ block noSeatCanStall:
   let node = parseJson(readFile(episode.resultsPath))
   assertResultsIdentities(node, 960, 6)
   doAssert node["policyKinds"][0].getStr == "llm"
-  # The closed player-failure payload has exactly two keys and nothing else.
-  let payload = %*{"failed_policy_index": 0, "message": "never joined"}
-  doAssert payload.len == 2
+  # The closed player-failure payload, from the proc the server actually
+  # calls (roster.playerFailurePayload, used by server.declarePlayerFailure) -
+  # asserting a literal built in the test would assert nothing about the
+  # server.
+  let payload = playerFailurePayload(0,
+    "player slot 0 never joined the lobby within 2400 lobby ticks")
+  doAssert payload.kind == JObject
+  doAssert payload.len == 2, "the payload is CLOSED: " & $payload
+  doAssert payload["failed_policy_index"].getInt == 0
+  doAssert payload["message"].getStr.startsWith("player slot 0")
   doAssert payload.hasKey("failed_policy_index") and payload.hasKey("message")
   removeDir(dir)
   echo "ok: a seat that never answers still produces a complete episode"

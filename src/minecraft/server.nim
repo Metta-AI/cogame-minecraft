@@ -192,7 +192,7 @@ proc declarePlayerFailure(slot: int, message: string) =
   try:
     writeCogameEnv(
       "COGAME_PLAYER_FAILURE_URI",
-      $(%*{"failed_policy_index": slot, "message": message}),
+      $playerFailurePayload(slot, message),
       "application/json"
     )
   except CatchableError as error:
