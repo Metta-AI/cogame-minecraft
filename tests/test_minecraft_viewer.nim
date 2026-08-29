@@ -140,9 +140,17 @@ block viewpanelKept:
       "#" & id & " must be KEPT: the board is much larger than the frame"
   doAssert "core.attachMinimap($('minimap-canvas'))" in prefix
   doAssert "CAMERA_CELLS = 15" in block1
-  doAssert "core.setZoom(" in block1, "the follow-cam sets the zoom"
-  doAssert "t.visW / 24" in block1,
-    "the follow-cam converges on the transform the core REPORTS"
+  # The follow-cam is pinned as an EXACT expression, the way the note's closed
+  # form `core.setZoom(32 / cameraCells)` was: a bare `core.setZoom(` matches
+  # ANY zoom call, so it guards nothing. The mechanism is a convergence loop
+  # rather than the closed form because the closed form is only right when the
+  # board fits on its width (docs/PORTING-MINECRAFT.md, divergence J).
+  doAssert "var cellsNow = t.visW > 0 ? t.visW / 24 : CAMERA_CELLS;" in block1,
+    "the follow-cam reads the cell span back from the transform the core REPORTS"
+  doAssert "if (followArmed && Math.abs(cellsNow - CAMERA_CELLS) > 0.5) {" in
+    block1, "the follow-cam corrects only while it is off target"
+  doAssert "core.setZoom((t.zoom || 1) * (cellsNow / CAMERA_CELLS));" in block1,
+    "the follow-cam converges on exactly CAMERA_CELLS cells across"
   doAssert "core.panTo(" in block1, "the follow-cam pans every frame"
   doAssert "followArmed" in block1
   # the inset lives in the RIGHT gutter, under the kept minimap

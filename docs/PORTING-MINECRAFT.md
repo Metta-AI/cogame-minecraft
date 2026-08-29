@@ -209,7 +209,30 @@ world digest, where `uint64` is 64 bits on every target.
 `tests/test_minecraft_world.nim` asserts every generated integer fits an
 `int32`, which is the check that would have caught it natively.
 
-## I. Four cog facings from one render
+## I. The follow-cam converges instead of using the note's closed form
+
+The note's test 42 asks the game block to call `core.setZoom(32 / cameraCells)`
+with `cameraCells == 15`. That closed form is only correct when the board is
+letterboxed on its **width**: `setZoom` is a scale on the core's own fit, and
+the core fits whichever axis is tighter. Measured in the browser (the fixture
+screenshot at run 33242102244) it left the board at roughly four cells across.
+
+`client/replay_broadcast.html:4653-4676` therefore reads the span back from the
+transform the core reports and corrects towards it:
+
+```js
+var cellsNow = t.visW > 0 ? t.visW / 24 : CAMERA_CELLS;
+if (followArmed && Math.abs(cellsNow - CAMERA_CELLS) > 0.5) {
+  core.setZoom((t.zoom || 1) * (cellsNow / CAMERA_CELLS));
+```
+
+`CAMERA_CELLS` is still 15 and the target is still the note's 15-cell window;
+only the way the zoom is computed differs, and the static bundle's core lives a
+thread away, so its own answer is the only honest one.
+`tests/test_minecraft_viewer.nim` pins all three lines as exact strings, so this
+mechanism cannot be loosened without the test noticing.
+
+## J. Four cog facings from one render
 
 `tools/art/source/cog_sheet.png` is one nano-banana render of four Softmax
 cogs in a miner's kit (head-lamp, pickaxe). The model drew them near
