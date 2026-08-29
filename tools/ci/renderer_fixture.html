@@ -195,40 +195,67 @@
   // the iframe: the drawn text must be the whole 160-rune say, the row must
   // not be clipped, and its box must be inside the frame. A quietly shortened
   // remark is exactly what leaves a fixture passing while testing nothing.
-  function checkNarration(doc, width, name, expected) {
+  //
+  // `redraw` is handed in because the feed is a QUEUE with a dwell timer: a
+  // row is removed a second or two after it lands, and a resize re-lays the
+  // whole chrome out, so a measurement that comes back degenerate is redrawn
+  // and re-measured rather than trusted.
+  function inspectNarration(doc, expected) {
     var span = doc.querySelector('#killfeed .feed-row .mc-say');
-    if (!span) {
-      throw new Error('no narration row drawn for "' + name + '" at ' +
-        width + 'px');
-    }
+    if (!span) return { ok: false, why: 'no narration row in the feed' };
     var drawn = span.textContent.replace(/^\u201c/, '').replace(/\u201d$/, '');
     if (drawn !== expected) {
-      throw new Error('the drawn say is ' + Array.from(drawn).length +
-        ' runes, the state carried ' + Array.from(expected).length +
-        ' ("' + name + '" at ' + width + 'px)');
+      return { ok: false, hard: true, why: 'the drawn say is ' +
+        Array.from(drawn).length + ' runes, the state carried ' +
+        Array.from(expected).length };
     }
     var row = span.parentNode;
-    while (row && row.className.indexOf('feed-row') < 0) row = row.parentNode;
-    if (!row) throw new Error('the say span is not inside a feed row');
-    if (row.scrollHeight > row.clientHeight + 2 ||
-        row.scrollWidth > row.clientWidth + 2) {
-      throw new Error('the narration row is CLIPPED at ' + width + 'px: ' +
-        row.scrollWidth + 'x' + row.scrollHeight + ' of text in a ' +
-        row.clientWidth + 'x' + row.clientHeight + ' box - a sentence that ' +
-        'ellipsises is a box that is too small');
+    while (row && String(row.className || '').indexOf('feed-row') < 0) {
+      row = row.parentNode;
     }
+    if (!row) return { ok: false, hard: true, why: 'the say is not in a row' };
     var rect = row.getBoundingClientRect();
     var win = doc.defaultView;
     if (rect.width < 1 || rect.height < 1) {
-      throw new Error('the narration row has no box at ' + width + 'px');
+      var feed = doc.getElementById('killfeed');
+      var stage = doc.getElementById('stage');
+      return { ok: false, why: 'the narration row has no box (' +
+        rect.width + 'x' + rect.height + '); display=' +
+        win.getComputedStyle(row).display + ' opacity=' +
+        win.getComputedStyle(row).opacity + ' offsetParent=' +
+        (row.offsetParent ? 'yes' : 'null') + ' feed=' +
+        (feed ? JSON.stringify(feed.getBoundingClientRect().width) : 'gone') +
+        ' stage=' + (stage ? stage.className + ' ' +
+        JSON.stringify(stage.getBoundingClientRect().width) : 'gone') +
+        ' --u=' + win.getComputedStyle(doc.documentElement)
+          .getPropertyValue('--hudscale') };
+    }
+    if (row.scrollHeight > row.clientHeight + 2 ||
+        row.scrollWidth > row.clientWidth + 2) {
+      return { ok: false, hard: true, why: 'the narration row is CLIPPED: ' +
+        row.scrollWidth + 'x' + row.scrollHeight + ' of text in a ' +
+        row.clientWidth + 'x' + row.clientHeight + ' box - a sentence that ' +
+        'ellipsises is a box that is too small' };
     }
     if (rect.top < -1 || rect.left < -1 ||
         rect.bottom > win.innerHeight + 1 || rect.right > win.innerWidth + 1) {
-      throw new Error('the narration row is outside the frame at ' + width +
-        'px: ' + JSON.stringify(rect.toJSON ? rect.toJSON() : rect) +
-        ' in ' + win.innerWidth + 'x' + win.innerHeight);
+      return { ok: false, why: 'the narration row is outside the frame: ' +
+        JSON.stringify([rect.left, rect.top, rect.right, rect.bottom]) +
+        ' in ' + win.innerWidth + 'x' + win.innerHeight };
     }
-    return Array.from(drawn).length;
+    return { ok: true, runes: Array.from(drawn).length };
+  }
+
+  async function checkNarration(doc, width, name, expected, redraw) {
+    var last = null;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      last = inspectNarration(doc, expected);
+      if (last.ok) return last.runes;
+      if (last.hard) break;
+      redraw();
+      await settle(400);
+    }
+    throw new Error(last.why + ' ("' + name + '" at ' + width + 'px)');
   }
 
   function checkEndcard(doc, width, name, opts) {
@@ -255,7 +282,14 @@
     for (var w = 0; w < WIDTHS.length; w++) {
       frame.width = WIDTHS[w];
       frame.height = Math.round(WIDTHS[w] * 9 / 16);
-      await settle(120);
+      // The page re-lays out on its own ResizeObserver, so wait for the stage
+      // to come back with a real box before drawing into it.
+      await settle(150);
+      for (var tries = 0; tries < 20; tries++) {
+        var stage = doc.getElementById('stage');
+        if (stage && stage.getBoundingClientRect().width > 1) break;
+        await settle(150);
+      }
       for (var i = 0; i < SCENARIOS.length; i++) {
         var opts = SCENARIOS[i].opts;
         opts.beats = BEATS;
@@ -264,7 +298,10 @@
         await settle(320);          // let `feedin` finish before measuring
         var runes = 0;
         if (expected) {
-          runes = checkNarration(doc, WIDTHS[w], SCENARIOS[i].name, expected);
+          runes = await checkNarration(doc, WIDTHS[w], SCENARIOS[i].name,
+            expected, (function (drawOpts) {
+              return function () { chrome.__fixture(state(drawOpts)); };
+            })(opts));
         }
         if (opts.ph === 'gameover') {
           checkEndcard(doc, WIDTHS[w], SCENARIOS[i].name, opts);
