@@ -4256,7 +4256,9 @@ body[data-noviewpanel] #viewpanel { display: none !important; }
 #mc-ladder .rung .at {
   color: var(--amber);
   font-variant-numeric: tabular-nums;
+  margin-left: auto;
 }
+#mc-ladder .rung .cap { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
 #mc-ladder .rung.lit {
   opacity: 1;
   background: rgba(232, 163, 61, 0.16);
@@ -4340,10 +4342,12 @@ button.beat-marker {
 #fpv {
   left: auto;
   right: calc(12 * var(--u));
-  top: calc(var(--topband, 0px) + 150 * var(--u));
+  /* Clear of #viewpanel above it: the minimap is one --viewpanel-w square
+     (>= 178u) plus the zoom bar, so the inset starts below both. */
+  top: calc(var(--topband, 0px) + 240 * var(--u));
   bottom: auto;
-  width: calc(150 * var(--u));
-  min-width: calc(96 * var(--u));
+  width: max(calc(132 * var(--u)), 96px);
+  min-width: 0;
   max-width: calc(220 * var(--u));
   aspect-ratio: 1 / 1;
   opacity: 0.95;
