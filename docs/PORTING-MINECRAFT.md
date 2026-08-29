@@ -298,3 +298,33 @@ front-facing rather than truly top-down, so the four split sprites read as
 four poses rather than four unambiguous headings; the cog's heading is also
 carried by the DOM chrome (`ALPHA · y=32 · FACING EAST`) and by the agent-view
 inset. A re-render with a stricter camera instruction is a cheap follow-up.
+
+## L. The board is composited server-side, so `broadcast_core.js` gained no draw calls
+
+The note's §Viewer says of `client/broadcast_core.js`: "Deleted: every
+ctf-specific draw call and the raycast FPV pipeline … Added: `drawBlocks`,
+`drawShafts`, `drawCog`, `drawFog`, `drawAgentView`, `drawLadder`,
+`drawStrata`, `drawInventory`." None of those eight functions exists in this
+repo, and the deletions did not happen either: `client/broadcast_core.js`
+differs from the starter's by exactly **one added line** (`:49`, the
+`MINECRAFT_WIRE` lookup).
+
+That is deliberate, and it is the stronger reading of the checklist's
+"the chrome is the starter's, not a lookalike":
+
+- The **board** is composited into the starter's own sprite protocol by
+  `src/minecraft/global.nim` (`buildBoardPacket`) and drawn by the starter's
+  unmodified compositor. Blocks, shafts, the cog and the fog are sprites in
+  that packet, not new draw calls in the client, so the camera, the zoom bar
+  and the minimap keep working on the code they were written for rather than
+  on a fork of it.
+- The four **panels** — the milestone ladder, the strata gauge, the inventory
+  strip and the agent-view inset — are DOM, built by the appended game block
+  (`client/replay_broadcast.html:4489+`). Item 15's "every drawn string fits
+  its frame" is why: a DOM panel cannot draw a caption at a negative
+  coordinate, and this viewer has no `fillText`/`strokeText` anywhere as a
+  result (test 44).
+
+The note's eight names describe the same eight readouts; only the layer they
+are drawn on differs, and the layer that shipped is the one that leaves
+`broadcast_core.js` inherited.
