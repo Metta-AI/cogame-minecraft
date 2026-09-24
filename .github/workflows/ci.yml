@@ -142,6 +142,11 @@ jobs:
           nim c -d:release --path:src -o:/tmp/minecraft-posttrain tools/export_posttrain.nim
           python3 tools/test_posttrain.py /tmp/minecraft-posttrain
 
+      - name: Train bridge complete games
+        run: |
+          nim c -d:release --path:src -o:/tmp/minecraft-train-bridge tools/train_bridge.nim
+          python3 tools/test_train_bridge.py /tmp/minecraft-train-bridge
+
       - name: Run tests
         # Every tests/*.nim runs twice: debug (range/overflow checks, stack
         # traces) and -d:release (release-only compile errors and codegen bugs
