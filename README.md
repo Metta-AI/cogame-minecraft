@@ -36,6 +36,7 @@ number — see [`docs/PORTING-MINECRAFT.md`](docs/PORTING-MINECRAFT.md).
   divergence, from Minecraft and from the design note.
 * [`docs/PROTOCOL.md`](docs/PROTOCOL.md) — the wire protocol, the routes, the
   registration message and the replay format.
+* [`TRAINING.md`](TRAINING.md) — complete-game post-training export.
 
 ## A policy is just a prompt
 

@@ -137,6 +137,11 @@ jobs:
       - name: Re-run the baseline sweep and compare with the pinned pick
         run: nim r --hints:off -d:release --path:src tools/tune_baselines.nim --check
 
+      - name: Export complete training episodes
+        run: |
+          nim c -d:release --path:src -o:/tmp/minecraft-posttrain tools/export_posttrain.nim
+          python3 tools/test_posttrain.py /tmp/minecraft-posttrain
+
       - name: Run tests
         # Every tests/*.nim runs twice: debug (range/overflow checks, stack
         # traces) and -d:release (release-only compile errors and codegen bugs
