@@ -23,9 +23,7 @@
         "/bin/minecraft"
       ],
       "source_url": "https://github.com/Metta-AI/cogame-minecraft/tree/main",
-      "env": {
-        "ANTHROPIC_API_KEY_URI": "secret://coworld/minecraft/anthropic_api_key"
-      }
+      "env": {}
     },
     "config_schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
