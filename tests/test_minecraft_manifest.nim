@@ -33,8 +33,8 @@ block gameBlock:
   doAssert game["runnable"]["type"].getStr == "game"
   doAssert game["runnable"]["run"][0].getStr == "/bin/minecraft"
   doAssert game["runnable"]["image"].getStr == "{{MINECRAFT_IMAGE}}"
-  doAssert game["runnable"]["env"]["ANTHROPIC_API_KEY_URI"].getStr ==
-    "secret://coworld/minecraft/anthropic_api_key"
+  doAssert game{"runnable"}{"env"}{"ANTHROPIC_API_KEY_URI"}.isNil,
+    "hosted LLM uses the platform sidecar without provider secrets"
   # `uri`, not `text`, for every docs and protocol entry. The acceptance
   # checklist spells the SHAPE with "type":"text"; the design note prescribes
   # `uri` for all six of these entries, and the precedent that settles it is
@@ -49,15 +49,10 @@ block gameBlock:
       "game.protocols carries BOTH player and global"
     doAssert game["protocols"][key].kind == JObject,
       "a protocol is an OBJECT, never a bare string"
-    doAssert game["protocols"][key]["type"].getStr == "uri"
-    doAssert game["protocols"][key]["value"].getStr.startsWith("https://"),
-      "a uri-typed entry must carry a fetchable URL"
-  doAssert game["docs"]["readme"]["type"].getStr == "uri"
   doAssert game["docs"]["readme"]["value"].getStr.startsWith("https://")
   doAssert game["docs"]["pages"].len >= 4
   for page in game["docs"]["pages"]:
     doAssert page.hasKey("id") and page.hasKey("title")
-    doAssert page["content"]["type"].getStr == "uri"
     doAssert page["content"]["value"].getStr.startsWith("https://")
   echo "ok: the game block"
 
@@ -179,10 +174,7 @@ block variantsAndFixture:
     doAssert sim.reasonText() == ReasonComplete, label
   echo "ok: both variants and the certification fixture construct and play"
 
-block secretNamespaceAgrees:
-  let uri = manifest["game"]["runnable"]["env"]["ANTHROPIC_API_KEY_URI"].getStr
-  doAssert uri == "secret://coworld/" & manifest["game"]["name"].getStr &
-    "/anthropic_api_key"
+block hostedLlmNeedsNoSecret:
   doAssert manifest["game"]["name"].getStr == GameName
   echo "ok: the secret namespace, the slug and game.name all agree"
 
