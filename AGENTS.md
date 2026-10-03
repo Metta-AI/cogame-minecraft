@@ -30,11 +30,12 @@ vendored/third-party code or Metta, Fabric, Fabric Research, or Polyworld.
   NEVER delete, prune, rotate, truncate, rewrite or move any of them. Do not
   redirect coding-agent storage to temporary directories.
 - This policy does not authorize cleanup. Leave existing artifacts, other
-  tasks' outputs and the user's Dota2 allocation untouched.
+  tasks' outputs untouched.
 - For AGENTS.md-only changes, use documentation checks (`git diff --check`
   and diff review); do not run game builds, dependency sync or populate global
   build/dependency caches.
-- Repository-specific diagnostic reference: `tools/ci/viewer_smoke.mjs` supports `--out`, `--timeout`
+- Repository-specific diagnostic reference:
+  `tools/ci/viewer_smoke.mjs` supports `--out`, `--timeout`
   and `--soak` and emits `viewer-smoke.png` / `viewer-smoke.json`. For
   disposable local QA, pass a unique temporary directory via `--out`; keep
   explicit retained replay/evidence paths unchanged.
