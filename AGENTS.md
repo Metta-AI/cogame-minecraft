@@ -7,7 +7,7 @@ current remote default branch; keep the original checkout unchanged.
 ## Disposable QA Storage
 
 This guidance applies only to this repository's first-party diagnostics, not
-vendored/third-party code or Metta, Fabric, Fabric Research, or Polyworld.
+vendored/third-party code or other repositories.
 
 - Default disposable diagnostic/audit logs, screenshots, frame dumps and
   browser reports to the OS temporary directory in an application-specific,
