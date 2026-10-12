@@ -175,7 +175,7 @@ proc turn*(engine: var DecisionEngine, sim: SimServer, turnIndex: int,
           "the JSON object described above, starting with '{', with an " &
           "\"actions\" array.")
       let request = engine.client.requestFor(
-        SystemPrompt, userMessage(engine.seats[seat].prompt, user))
+        SystemPrompt, userMessage(engine.seats[seat].prompt, user), seat)
       batch.post(request.url, request.headers, request.body, $seat)
       engine.requestTimes.add(getMonoTime())
     let started = getMonoTime()
